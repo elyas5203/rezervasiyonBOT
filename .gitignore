@@ -33,3 +33,8 @@ __pycache__/
 venv/
 .DS_Store
 Thumbs.db
+
+# Generated gstack Codex skills and local state; source is the pinned submodule
+/.agents/skills/gstack/
+/.agents/skills/gstack-*/
+/.gstack/

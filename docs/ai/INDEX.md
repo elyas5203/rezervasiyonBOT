@@ -12,13 +12,14 @@
 | نبایدهای سراسری | docs/ai/ROOT_MASTER.md#L44-L53 — «۴. نبایدهای ریشه» |
 | رابطه مفهومی داده | docs/ai/ROOT_MASTER.md#L54-L70 — «۵. منبع حقیقت» |
 | دروازه شروع فاز اول | docs/ai/ROOT_MASTER.md#L95-L100 — «۸. دروازه‌های قبل از فاز اول» |
+| ابزار کمکی تحلیل | docs/ai/ROOT_MASTER.md#L102-L104 — «۹. ابزار کمکی تحلیل» |
 
 ## دامنه‌های والد
 
 | موضوع | ارجاع دقیق |
 |---|---|
-| هویت مشترک و نقش | docs/ai/domains/AUTH_AND_IDENTITY.md#L5-L30 — «قرارداد/گراف هویت» |
-| تأیید موکب و سالن/اتاق | docs/ai/domains/LODGING_INVENTORY.md#L5-L34 — «قرارداد/چرخه عرضه» |
+| هویت مشترک و نقش | docs/ai/domains/AUTH_AND_IDENTITY.md#L5-L33 — «قرارداد/گراف هویت» |
+| تأیید موکب و سالن/اتاق | docs/ai/domains/LODGING_INVENTORY.md#L5-L36 — «قرارداد/چرخه عرضه» |
 | تقویم و ظرفیت | docs/ai/domains/CORE_BUSINESS_ENGINE.md#L5-L33 — «قرارداد/گراف تصمیم ظرفیت» |
 | رزرو و ماشین وضعیت | docs/ai/domains/RESERVATION_LIFECYCLE.md#L5-L45 — «قرارداد/ماشین وضعیت» |
 | کارت‌به‌کارت و تضمین | docs/ai/domains/BILLING_AND_WALLET.md#L5-L37 — «مرز/ماشین مالی» |
@@ -40,7 +41,8 @@
 | حضور، لغو و اعلان | docs/ai/masters/MASTER_07_STAY_CANCELLATION_AND_NOTICES.md#L9-L47 — «خروجی تا پرسش‌ها» |
 | عملیات مدیر | docs/ai/masters/MASTER_08_ADMIN_OPERATIONS_AND_HANDOFF.md#L9-L46 — «خروجی تا دروازه اجرا» |
 | مخزن و VPS امن | docs/ai/masters/MASTER_09_REPOSITORY_AND_SAFE_DEPLOYMENT.md#L9-L50 — «هدف تا دروازه اجرا» |
-| تحویل به عامل کدنویس و پذیرش سرتاسری | docs/ai/masters/MASTER_10_END_TO_END_ACCEPTANCE.md#L9-L86 — «ترتیب خواندن تا دروازه اجرا» |
+| تحویل به عامل کدنویس و پذیرش سرتاسری | docs/ai/masters/MASTER_10_END_TO_END_ACCEPTANCE.md#L9-L89 — «ترتیب خواندن تا دروازه اجرا» |
+| نصب و استفاده کنترل‌شده از gstack | docs/ai/masters/MASTER_11_GSTACK_WORKFLOW.md#L9-L44 — «هدف تا وضعیت بررسی» |
 
 ## دفتر تصمیم و حافظه
 
@@ -60,6 +62,9 @@
 | تأیید خارجی فقط با موکب‌دار و آخرین روز هفت‌روزه | docs/ai/DECISIONS.md#L222-L235 — «DEC-0032 تا DEC-0033» |
 | مرز محلی، نگه‌داشت ظرفیت و گذرنامه | docs/ai/DECISIONS.md#L236-L256 — «DEC-0034 تا DEC-0036» |
 | حذف مدرک بی‌اقامت، تومان و بازیابی حساب | docs/ai/DECISIONS.md#L257-L277 — «DEC-0037 تا DEC-0039» |
-| پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-14» |
+| کد پیوند و مدارک تأیید موکب | docs/ai/DECISIONS.md#L278-L291 — «DEC-0040 تا DEC-0041» |
+| انتخاب ابزار gstack برای این پروژه | docs/ai/DECISIONS.md#L292-L298 — «DEC-0042» |
+| اولین ورود و زمان گرفتن شماره | docs/ai/DECISIONS.md#L299-L305 — «DEC-0043» |
+| پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-15» |
 | وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L12 — «Current state / روش شروع شیفت» |
-| تاریخچه | docs/ai/CHANGELOG.md#L1-L42 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
+| تاریخچه | docs/ai/CHANGELOG.md#L1-L55 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
