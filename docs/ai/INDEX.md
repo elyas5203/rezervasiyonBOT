@@ -58,4 +58,4 @@
 | پنل، VPS و GitHub | docs/ai/DECISIONS.md#L194-L221 — «DEC-0028 تا DEC-0031» |
 | پرسش‌های باز | docs/ai/BACKLOG.md#L6-L22 — «OPEN-01 تا OPEN-12» |
 | وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L12 — «Current state / روش شروع شیفت» |
-| تاریخچه | docs/ai/CHANGELOG.md#L1-L31 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
+| تاریخچه | docs/ai/CHANGELOG.md#L1-L33 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
