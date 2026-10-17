@@ -40,6 +40,7 @@
 | حضور، لغو و اعلان | docs/ai/masters/MASTER_07_STAY_CANCELLATION_AND_NOTICES.md#L9-L47 — «خروجی تا پرسش‌ها» |
 | عملیات مدیر | docs/ai/masters/MASTER_08_ADMIN_OPERATIONS_AND_HANDOFF.md#L9-L46 — «خروجی تا دروازه اجرا» |
 | مخزن و VPS امن | docs/ai/masters/MASTER_09_REPOSITORY_AND_SAFE_DEPLOYMENT.md#L9-L50 — «هدف تا دروازه اجرا» |
+| تحویل به عامل کدنویس و پذیرش سرتاسری | docs/ai/masters/MASTER_10_END_TO_END_ACCEPTANCE.md#L9-L86 — «ترتیب خواندن تا دروازه اجرا» |
 
 ## دفتر تصمیم و حافظه
 
@@ -56,6 +57,9 @@
 | اتاق، نقش مدیر و رزرو هم‌زمان | docs/ai/DECISIONS.md#L152-L171 — «DEC-0022 تا DEC-0024» |
 | مهلت، زائر خارجی و ظرفیت کودک | docs/ai/DECISIONS.md#L173-L193 — «DEC-0025 تا DEC-0027» |
 | پنل، VPS و GitHub | docs/ai/DECISIONS.md#L194-L221 — «DEC-0028 تا DEC-0031» |
-| پرسش‌های باز | docs/ai/BACKLOG.md#L6-L22 — «OPEN-01 تا OPEN-12» |
+| تأیید خارجی فقط با موکب‌دار و آخرین روز هفت‌روزه | docs/ai/DECISIONS.md#L222-L235 — «DEC-0032 تا DEC-0033» |
+| مرز محلی، نگه‌داشت ظرفیت و گذرنامه | docs/ai/DECISIONS.md#L236-L256 — «DEC-0034 تا DEC-0036» |
+| حذف مدرک بی‌اقامت، تومان و بازیابی حساب | docs/ai/DECISIONS.md#L257-L277 — «DEC-0037 تا DEC-0039» |
+| پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-14» |
 | وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L12 — «Current state / روش شروع شیفت» |
-| تاریخچه | docs/ai/CHANGELOG.md#L1-L33 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
+| تاریخچه | docs/ai/CHANGELOG.md#L1-L42 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
