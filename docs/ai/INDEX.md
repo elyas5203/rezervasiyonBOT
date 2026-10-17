@@ -1,0 +1,61 @@
+# INDEX — رادار موضوعی با ارجاع دقیق
+
+> قالب هر ارجاع: مسیر سند + محدوده خط + نام بخش/نماد. تا ایجاد کد محصول، هیچ ارجاع کدی وجود ندارد. پس از ویرایش اسناد، این شماره خط‌ها باید دوباره بررسی شوند.
+
+## نقشه کلان
+
+| موضوع | ارجاع دقیق |
+|---|---|
+| چشم‌انداز و دامنه | docs/ai/ROOT_MASTER.md#L8-L12 — «۱. چشم‌انداز و محدوده» |
+| نقش‌ها و اختیارها | docs/ai/ROOT_MASTER.md#L14-L22 — «۲. پرسونـا و اختیارها» |
+| مرز ماژول‌ها | docs/ai/ROOT_MASTER.md#L23-L43 — «۳. نقشه ماژول‌ها و مرزها» |
+| نبایدهای سراسری | docs/ai/ROOT_MASTER.md#L44-L53 — «۴. نبایدهای ریشه» |
+| رابطه مفهومی داده | docs/ai/ROOT_MASTER.md#L54-L70 — «۵. منبع حقیقت» |
+| دروازه شروع فاز اول | docs/ai/ROOT_MASTER.md#L95-L100 — «۸. دروازه‌های قبل از فاز اول» |
+
+## دامنه‌های والد
+
+| موضوع | ارجاع دقیق |
+|---|---|
+| هویت مشترک و نقش | docs/ai/domains/AUTH_AND_IDENTITY.md#L5-L30 — «قرارداد/گراف هویت» |
+| تأیید موکب و سالن/اتاق | docs/ai/domains/LODGING_INVENTORY.md#L5-L34 — «قرارداد/چرخه عرضه» |
+| تقویم و ظرفیت | docs/ai/domains/CORE_BUSINESS_ENGINE.md#L5-L33 — «قرارداد/گراف تصمیم ظرفیت» |
+| رزرو و ماشین وضعیت | docs/ai/domains/RESERVATION_LIFECYCLE.md#L5-L45 — «قرارداد/ماشین وضعیت» |
+| کارت‌به‌کارت و تضمین | docs/ai/domains/BILLING_AND_WALLET.md#L5-L37 — «مرز/ماشین مالی» |
+| اعلان و موعد | docs/ai/domains/NOTIFICATIONS_AND_JOBS.md#L5-L28 — «مرز/جریان رویداد» |
+| تلگرام و بله | docs/ai/domains/CHANNEL_ADAPTERS.md#L5-L29 — «مرز/گراف درگاه» |
+| مدیر و اختلاف | docs/ai/domains/ADMIN_AND_TRUST.md#L5-L30 — «مرز/گراف رسیدگی» |
+| مخزن و استقرار ایزوله | docs/ai/domains/SOURCE_CONTROL_AND_DEPLOYMENT.md#L5-L34 — «قرارداد/نبایدها/گراف» |
+
+## مسترهای فرزند؛ ترتیب کار
+
+| کار | ارجاع دقیق |
+|---|---|
+| پایه‌ریزی و دروازه | docs/ai/masters/MASTER_01_PROJECT_FOUNDATION.md#L9-L52 — «دستور تا شرط پایان» |
+| حساب مشترک و چهار بات | docs/ai/masters/MASTER_02_IDENTITY_AND_CHANNELS.md#L9-L43 — «هدف تا سؤال مسدودکننده» |
+| ثبت موکب و فضا | docs/ai/masters/MASTER_03_HOST_ONBOARDING_AND_SPACES.md#L9-L47 — «خروجی تا پرسش‌ها» |
+| تقویم و ظرفیت | docs/ai/masters/MASTER_04_CALENDAR_AND_CAPACITY.md#L9-L47 — «خروجی تا گره تصمیم» |
+| جست‌وجو و رزرو | docs/ai/masters/MASTER_05_TRAVELER_SEARCH_AND_BOOKING.md#L9-L54 — «سفر تا پرسش‌ها» |
+| هزینه و تضمین | docs/ai/masters/MASTER_06_MONEY_RECEIPTS_AND_REFUNDS.md#L9-L50 — «سه مدل تا پرسش‌ها» |
+| حضور، لغو و اعلان | docs/ai/masters/MASTER_07_STAY_CANCELLATION_AND_NOTICES.md#L9-L47 — «خروجی تا پرسش‌ها» |
+| عملیات مدیر | docs/ai/masters/MASTER_08_ADMIN_OPERATIONS_AND_HANDOFF.md#L9-L46 — «خروجی تا دروازه اجرا» |
+| مخزن و VPS امن | docs/ai/masters/MASTER_09_REPOSITORY_AND_SAFE_DEPLOYMENT.md#L9-L50 — «هدف تا دروازه اجرا» |
+
+## دفتر تصمیم و حافظه
+
+| موضوع | ارجاع دقیق |
+|---|---|
+| تصمیم‌های دامنه و کانال | docs/ai/DECISIONS.md#L5-L32 — «DEC-0001 تا DEC-0004» |
+| اسکان، اتاق و جنسیت | docs/ai/DECISIONS.md#L33-L60 — «DEC-0005 تا DEC-0008» |
+| تقویم، تأیید و مدل مالی | docs/ai/DECISIONS.md#L61-L81 — «DEC-0009 تا DEC-0011» |
+| کارت‌به‌کارت و تضمین | docs/ai/DECISIONS.md#L82-L95 — «DEC-0012 تا DEC-0013» |
+| قانون، شماره و UX | docs/ai/DECISIONS.md#L96-L116 — «DEC-0014 تا DEC-0016» |
+| توقف کد تا تأیید | docs/ai/DECISIONS.md#L117-L122 — «DEC-0017» |
+| پیوند حساب و تأیید موکب | docs/ai/DECISIONS.md#L124-L137 — «DEC-0018 تا DEC-0019» |
+| رسید و تضمین بیرون سامانه | docs/ai/DECISIONS.md#L138-L151 — «DEC-0020 تا DEC-0021» |
+| اتاق، نقش مدیر و رزرو هم‌زمان | docs/ai/DECISIONS.md#L152-L171 — «DEC-0022 تا DEC-0024» |
+| مهلت، زائر خارجی و ظرفیت کودک | docs/ai/DECISIONS.md#L173-L193 — «DEC-0025 تا DEC-0027» |
+| پنل، VPS و GitHub | docs/ai/DECISIONS.md#L194-L221 — «DEC-0028 تا DEC-0031» |
+| پرسش‌های باز | docs/ai/BACKLOG.md#L6-L22 — «OPEN-01 تا OPEN-12» |
+| وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L12 — «Current state / روش شروع شیفت» |
+| تاریخچه | docs/ai/CHANGELOG.md#L1-L31 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
