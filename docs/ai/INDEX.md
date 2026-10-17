@@ -13,6 +13,7 @@
 | رابطه مفهومی داده | docs/ai/ROOT_MASTER.md#L54-L70 — «۵. منبع حقیقت» |
 | دروازه شروع فاز اول | docs/ai/ROOT_MASTER.md#L95-L100 — «۸. دروازه‌های قبل از فاز اول» |
 | ابزار کمکی تحلیل | docs/ai/ROOT_MASTER.md#L102-L104 — «۹. ابزار کمکی تحلیل» |
+| آغاز مرحله‌ای و نقش‌ها | docs/ai/ROOT_MASTER.md#L106-L108 — «۱۰. آغاز مرحله‌ای و نقش‌های بازبین» |
 
 ## دامنه‌های والد
 
@@ -41,8 +42,12 @@
 | حضور، لغو و اعلان | docs/ai/masters/MASTER_07_STAY_CANCELLATION_AND_NOTICES.md#L9-L47 — «خروجی تا پرسش‌ها» |
 | عملیات مدیر | docs/ai/masters/MASTER_08_ADMIN_OPERATIONS_AND_HANDOFF.md#L9-L46 — «خروجی تا دروازه اجرا» |
 | مخزن و VPS امن | docs/ai/masters/MASTER_09_REPOSITORY_AND_SAFE_DEPLOYMENT.md#L9-L50 — «هدف تا دروازه اجرا» |
-| تحویل به عامل کدنویس و پذیرش سرتاسری | docs/ai/masters/MASTER_10_END_TO_END_ACCEPTANCE.md#L9-L89 — «ترتیب خواندن تا دروازه اجرا» |
-| نصب و استفاده کنترل‌شده از gstack | docs/ai/masters/MASTER_11_GSTACK_WORKFLOW.md#L9-L44 — «هدف تا وضعیت بررسی» |
+| تحویل به عامل کدنویس و پذیرش سرتاسری | docs/ai/masters/MASTER_10_END_TO_END_ACCEPTANCE.md#L9-L90 — «ترتیب خواندن تا دروازه اجرا» |
+| نصب و استفاده کنترل‌شده از gstack | docs/ai/masters/MASTER_11_GSTACK_WORKFLOW.md#L9-L47 — «هدف تا وضعیت بررسی» |
+| برنامه شروع فاز اول | docs/ai/masters/MASTER_12_PHASE_ONE_IMPLEMENTATION_START.md#L1-L48 — «محدوده، گراف و معیار پذیرش» |
+| نقش‌های بازبین | docs/ai/masters/MASTER_13_REVIEW_PERSONAS.md#L1-L29 — «نقش‌ها و نبایدها» |
+| کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
+| ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
 ## دفتر تصمیم و حافظه
 
@@ -65,6 +70,7 @@
 | کد پیوند و مدارک تأیید موکب | docs/ai/DECISIONS.md#L278-L291 — «DEC-0040 تا DEC-0041» |
 | انتخاب ابزار gstack برای این پروژه | docs/ai/DECISIONS.md#L292-L298 — «DEC-0042» |
 | اولین ورود و زمان گرفتن شماره | docs/ai/DECISIONS.md#L299-L305 — «DEC-0043» |
+| اجازه شروع محلی مرحله‌ای | docs/ai/DECISIONS.md#L306-L312 — «DEC-0044» |
 | پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-15» |
-| وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L12 — «Current state / روش شروع شیفت» |
-| تاریخچه | docs/ai/CHANGELOG.md#L1-L55 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
+| وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L33 — «Current state / روش شروع شیفت» |
+| تاریخچه | docs/ai/CHANGELOG.md#L1-L76 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |

@@ -2,6 +2,8 @@
 
 این مخزن فعلاً شامل تحلیل محصول و مسترهای اجرایی است. کد بات‌ها و پایگاه داده هنوز نوشته نشده‌اند. نقطه شروع مطالعه [وضعیت پروژه](docs/ai/PROJECT_STATE.md)، سپس [فهرست کارهای باز](docs/ai/BACKLOG.md)، [نمایه اسناد](docs/ai/INDEX.md) و [نقشه اصلی](docs/ai/ROOT_MASTER.md) است.
 
+کارفرما آغاز مرحله‌ای طراحی فنی و پیاده‌سازی محلی را طبق DEC-0044 مجاز کرده است. [ممیزی آمادگی](docs/ai/IMPLEMENTATION_READINESS_AUDIT.md)، [مستر شروع فاز اول](docs/ai/masters/MASTER_12_PHASE_ONE_IMPLEMENTATION_START.md)، [راهنمای نقش‌های بازبین](docs/ai/agents/AGENT_PLAYBOOK.md) و فایل `پرامپت شروع کدنویسی پروژه.txt` مسیر تحویل به عامل کدنویس‌اند. استقرار VPS هنوز مجوز جدا می‌خواهد.
+
 ## gstack در این پروژه
 
 برای متن‌های آماده و مثال‌های ساده، [راهنمای استفاده از gstack](راهنمای%20استفاده%20از%20gstack.txt) را باز کنید.
@@ -21,4 +23,4 @@
 - «با `gstack-plan-eng-review` سند [مستر رزرو](docs/ai/masters/MASTER_05_TRAVELER_SEARCH_AND_BOOKING.md) را بازبینی کن.»
 - «با `gstack-review` تغییرات شاخه را بازبینی کن.»
 
-در مرحله فعلی، خروجی gstack باید در ساختار `docs/ai/` و پس از تطبیق با [دفتر تصمیم‌ها](docs/ai/DECISIONS.md) ثبت شود. دستورهای پیاده‌سازی، انتشار و استقرار gstack هنوز برای این پروژه فعال نیستند. راهنمای کامل ابزار در [مخزن gstack](https://github.com/garrytan/gstack) است.
+در مرحله فعلی، خروجی gstack باید در ساختار `docs/ai/` و پس از تطبیق با [دفتر تصمیم‌ها](docs/ai/DECISIONS.md) ثبت شود. بازبینی و پیاده‌سازی محلیِ مرحله‌ای مجاز است، اما دستورهای انتشار و استقرار gstack هنوز مجوز جداگانه می‌خواهند. راهنمای کامل ابزار در [مخزن gstack](https://github.com/garrytan/gstack) است.
