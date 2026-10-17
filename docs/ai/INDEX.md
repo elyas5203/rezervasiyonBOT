@@ -47,6 +47,7 @@
 | برنامه شروع فاز اول | docs/ai/masters/MASTER_12_PHASE_ONE_IMPLEMENTATION_START.md#L1-L48 — «محدوده، گراف و معیار پذیرش» |
 | نقش‌های بازبین | docs/ai/masters/MASTER_13_REVIEW_PERSONAS.md#L1-L29 — «نقش‌ها و نبایدها» |
 | انتخاب فناوری و طرح داده | docs/ai/masters/MASTER_14_TECH_STACK_AND_DATA_FOUNDATION.md#L1-L173 — «فناوری، مرزها و طرح داده» |
+| طرح تفصیلی اسکیما و مایگریشن | docs/ai/masters/MASTER_15_DATABASE_SCHEMA_AND_MIGRATIONS.md#L1-L190 — «اسکیما، روابط و آزمون‌ها» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
@@ -74,4 +75,4 @@
 | اجازه شروع محلی مرحله‌ای | docs/ai/DECISIONS.md#L306-L312 — «DEC-0044» |
 | پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-15» |
 | وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L33 — «Current state / روش شروع شیفت» |
-| تاریخچه | docs/ai/CHANGELOG.md#L1-L77 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
+| تاریخچه | docs/ai/CHANGELOG.md#L1-L84 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
