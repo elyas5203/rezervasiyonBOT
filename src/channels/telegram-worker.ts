@@ -15,6 +15,35 @@ export interface BotWorkerConfig {
   adminPasskey?: string;
 }
 
+export interface HostWizardSession {
+  step: "CITY" | "TITLE" | "CONTACT" | "ADDRESS" | "SUPPLY_TYPE" | "CAPACITY" | "FINANCIAL" | "APPROVAL" | "CONFIRM";
+  data: {
+    city?: string;
+    title?: string;
+    contactName?: string;
+    contactPhone?: string;
+    address?: string;
+    supplyType?: "PUBLIC" | "PRIVATE" | "BOTH";
+    hallCapacity?: number;
+    roomCount?: number;
+    roomCapacity?: number;
+    financialModel?: "FREE" | "FIXED_FEE" | "FIXED_DEPOSIT";
+    feeAmountToman?: number;
+    depositAmountToman?: number;
+    approvalMode?: "INSTANT" | "MANUAL";
+  };
+}
+
+export interface TravelerReservationRecord {
+  id: string;
+  placeId: string;
+  placeTitle: string;
+  city: string;
+  partySize: number;
+  status: "CONFIRMED" | "PENDING_HOST_APPROVAL";
+  createdAt: Date;
+}
+
 export class TelegramBotWorker {
   readonly token: string;
   readonly role: "TRAVELER" | "HOST" | "ADMIN";
@@ -29,6 +58,8 @@ export class TelegramBotWorker {
   private authenticatedAdmins: Set<string> = new Set();
   private peerAdminWorker?: TelegramBotWorker;
   private lastBotMessageIds: Map<string, number | string> = new Map();
+  private hostWizards: Map<string, HostWizardSession> = new Map();
+  private travelerReservations: Map<string, TravelerReservationRecord[]> = new Map();
 
   constructor(config: BotWorkerConfig) {
     this.token = config.token;
@@ -284,21 +315,169 @@ export class TelegramBotWorker {
       const message = {
         chatId,
         messageId,
-        text: `<b>🔍 جست‌وجوی اقامتگاه‌های فعال:</b>\n\nشهرهای زیارتی تحت پوشش:\n• کربلای معلی 🇮🇶\n• نجف اشرف 🇮🇶\n• مشهد مقدس 🇮🇷\n• قم مقدسه 🇮🇷\n\nجهت ثبت درخواست، ظرفیت‌های خالی در روزهای آینده فعال خواهند شد.`,
-        inlineKeyboard: [[{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }]],
+        text: `<b>🔍 جست‌وجوی اقامتگاه‌های زیارتی:</b>\n\nلطفاً شهر مقصد مورد نظر خود را انتخاب فرمایید:`,
+        inlineKeyboard: [
+          [
+            { text: "کربلای معلی 🇮🇶", callbackData: "TRAVELER_CITY_کربلای معلی" },
+            { text: "نجف اشرف 🇮🇶", callbackData: "TRAVELER_CITY_نجف اشرف" },
+          ],
+          [
+            { text: "مشهد مقدس 🇮🇷", callbackData: "TRAVELER_CITY_مشهد مقدس" },
+            { text: "قم مقدسه 🇮🇷", callbackData: "TRAVELER_CITY_قم مقدسه" },
+          ],
+          [{ text: "🌟 مشاهده تمامی اقامتگاه‌های فعال", callbackData: "TRAVELER_CITY_ALL" }],
+          [{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }],
+        ],
       };
       await this.editOrSendMessage(message);
       return;
     }
 
-    if (callback === "MY_RESERVATIONS") {
-      const message = {
+    if (callback && callback.startsWith("TRAVELER_CITY_")) {
+      const rawCity = callback.replace("TRAVELER_CITY_", "");
+      const cityFilter = rawCity === "ALL" ? undefined : rawCity;
+      const approved = await this.inventoryService.getApprovedPlaces(cityFilter);
+
+      if (approved.length === 0) {
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>🔍 نتایج جست‌وجو در ${rawCity === "ALL" ? "تمام شهرها" : rawCity}:</b>\n\nدر حال حاضر هیچ موکب تأییدشده‌ای در این بخش فعال نیست ⏳\nبه محض بررسی و تأیید پرونده‌های جدید توسط مدیریت، ظرفیت‌ها در دسترس قرار خواهند گرفت.`,
+          inlineKeyboard: [
+            [{ text: "🔍 انتخاب شهر دیگر", callbackData: "SEARCH_SPACES" }],
+            [{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }],
+          ],
+        });
+        return;
+      }
+
+      let textResults = `<b>🔍 تعداد ${approved.length} اقامتگاه فعال در ${rawCity === "ALL" ? "سامانه" : rawCity}:</b>\n\n`;
+      const keyboard: any[][] = [];
+
+      for (const [idx, p] of approved.entries()) {
+        const spaces = await this.inventoryService.getSpacesByPlaceId(p.id);
+        const totalCap = spaces.reduce((sum, s) => sum + s.nominalCapacity, 0);
+        const finText = p.financialModel === "FREE" ? "رایگان و صلواتی 💚" : p.financialModel === "FIXED_FEE" ? `شبی ${p.feeAmountToman.toLocaleString('fa-IR')} تومان` : `تضمین ${p.depositAmountToman.toLocaleString('fa-IR')} تومان`;
+
+        textResults += `${idx + 1}. <b>${p.title}</b> (${p.city})\n`;
+        textResults += `   📍 نشانی: ${p.address}\n`;
+        textResults += `   👥 ظرفیت کل: ${totalCap} نفر | مدل مالی: ${finText}\n`;
+        textResults += `   ⚡️ نوع پذیرش: ${p.approvalMode === "INSTANT" ? "فوری و آنی ⚡️" : "دستی با تأیید موکب‌دار ⏳"}\n\n`;
+
+        keyboard.push([{ text: `رزرو در ${p.title} 🏨`, callbackData: `TRAVELER_BOOK_${p.id}` }]);
+      }
+
+      keyboard.push([{ text: "🔍 جست‌وجو در شهر دیگر", callbackData: "SEARCH_SPACES" }]);
+      keyboard.push([{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }]);
+
+      await this.editOrSendMessage({
         chatId,
         messageId,
-        text: `<b>📋 پیگیری رزروها:</b>\n\nتاکنون رزرو قطعی برای حساب کاربری شما ثبت نشده است.\nجهت ثبت رزرو از بخش «جست‌وجوی موکب و اقامتگاه» اقدام فرمایید.`,
-        inlineKeyboard: [[{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }]],
-      };
-      await this.editOrSendMessage(message);
+        text: textResults,
+        inlineKeyboard: keyboard,
+      });
+      return;
+    }
+
+    if (callback && callback.startsWith("TRAVELER_BOOK_")) {
+      const placeId = callback.replace("TRAVELER_BOOK_", "");
+      const place = await this.inventoryService.getPlaceById(placeId);
+      if (!place) {
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: "موکب مورد نظر یافت نشد.",
+          inlineKeyboard: [[{ text: "🔙 بازگشت به جست‌وجو", callbackData: "SEARCH_SPACES" }]],
+        });
+        return;
+      }
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: `<b>🏨 ثبت درخواست اسکان در ${place.title}:</b>\n\n• شهر: ${place.city}\n• نشانی: ${place.address}\n• شیوه پذیرش: ${place.approvalMode === "INSTANT" ? "فوری و قطعی آنی ⚡️" : "بررسی و تأیید موکب‌دار ⏳"}\n\nلطفاً تعداد نفرات گروه همراه را انتخاب نمایید:`,
+        inlineKeyboard: [
+          [
+            { text: "۱ نفر (انفرادی)", callbackData: `TRAVELER_DOBOOK_${place.id}_1` },
+            { text: "۲ نفر", callbackData: `TRAVELER_DOBOOK_${place.id}_2` },
+          ],
+          [
+            { text: "۴ نفر", callbackData: `TRAVELER_DOBOOK_${place.id}_4` },
+            { text: "۶ نفر", callbackData: `TRAVELER_DOBOOK_${place.id}_6` },
+          ],
+          [{ text: "🔙 بازگشت به لیست", callbackData: `TRAVELER_CITY_${place.city}` }],
+        ],
+      });
+      return;
+    }
+
+    if (callback && callback.startsWith("TRAVELER_DOBOOK_")) {
+      const parts = callback.replace("TRAVELER_DOBOOK_", "").split("_");
+      const placeId = parts[0];
+      const count = Number(parts[1] || 1);
+      const place = await this.inventoryService.getPlaceById(placeId);
+      if (!place) return;
+
+      const resId = `RES-${Date.now().toString().slice(-6)}`;
+      const statusText = place.approvalMode === "INSTANT" ? "تأییدشده و قطعی (CONFIRMED) ✅" : "در انتظار تأیید موکب‌دار (PENDING) ⏳";
+
+      const userReservations = this.travelerReservations.get(chatId) || [];
+      userReservations.push({
+        id: resId,
+        placeId: place.id,
+        placeTitle: place.title,
+        city: place.city,
+        partySize: count,
+        status: place.approvalMode === "INSTANT" ? "CONFIRMED" : "PENDING_HOST_APPROVAL",
+        createdAt: new Date(),
+      });
+      this.travelerReservations.set(chatId, userReservations);
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: `🌸 <b>درخواست اسکان شما با موفقیت ثبت شد!</b>\n\n🏷 <b>کد رهگیری رزرو:</b> <code>${resId}</code>\n🏨 <b>اقامتگاه:</b> ${place.title} (${place.city})\n👥 <b>تعداد نفرات:</b> ${count} نفر\n📋 <b>وضعیت رزرو:</b> ${statusText}\n\nجهت پیگیری وضعیت، می‌توانید از بخش «پیگیری رزروهای من» در منوی اصلی اقدام فرمایید.`,
+        inlineKeyboard: [
+          [{ text: "📋 پیگیری رزروهای من", callbackData: "MY_RESERVATIONS" }],
+          [{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }],
+        ],
+      });
+      return;
+    }
+
+    if (callback === "MY_RESERVATIONS") {
+      const userReservations = this.travelerReservations.get(chatId) || [];
+      if (userReservations.length === 0) {
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>📋 پیگیری رزروها:</b>\n\nتاکنون رزروی برای حساب کاربری شما ثبت نشده است.\nجهت ثبت درخواست اسکان، از بخش «جست‌وجوی موکب و اقامتگاه» اقدام فرمایید.`,
+          inlineKeyboard: [
+            [{ text: "🔍 جست‌وجوی موکب", callbackData: "SEARCH_SPACES" }],
+            [{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }],
+          ],
+        });
+        return;
+      }
+
+      let textRes = `<b>📋 لیست رزروهای شما (${userReservations.length} مورد):</b>\n\n`;
+      for (const [idx, r] of userReservations.entries()) {
+        const badge = r.status === "CONFIRMED" ? "قطعی و تأییدشده ✅" : "در انتظار تأیید موکب‌دار ⏳";
+        textRes += `${idx + 1}. <b>کد رهگیری: <code>${r.id}</code></b>\n`;
+        textRes += `   🏨 موکب: ${r.placeTitle} (${r.city})\n`;
+        textRes += `   👥 نفرات: ${r.partySize} نفر | وضعیت: ${badge}\n\n`;
+      }
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: textRes,
+        inlineKeyboard: [
+          [{ text: "🔍 جست‌وجوی موکب جدید", callbackData: "SEARCH_SPACES" }],
+          [{ text: "🔄 به‌روزرسانی لیست", callbackData: "MY_RESERVATIONS" }],
+          [{ text: "🔙 بازگشت به منوی اصلی", callbackData: "MENU" }],
+        ],
+      });
       return;
     }
 
@@ -345,7 +524,11 @@ export class TelegramBotWorker {
     fromUserId?: string,
     messageId?: number | string
   ) {
+    const hostId = String(fromUserId || chatId);
+
+    // ۱. خروج از ویزارد یا بازگشت به منوی اصلی موکب‌دار
     if (text === "/start" || callback === "HOST_MENU") {
+      this.hostWizards.delete(chatId);
       const message = {
         chatId,
         messageId,
@@ -361,54 +544,394 @@ export class TelegramBotWorker {
       return;
     }
 
+    // ۲. شروع ویزارد ثبت موکب (گام ۱: انتخاب شهر)
     if (callback === "REGISTER_HOST") {
+      this.hostWizards.set(chatId, { step: "CITY", data: {} });
       const message = {
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب و فضاهای اسکان:</b>\n\nمدارک لازم جهت تأیید:\n۱. نام و مشخصات مسئول موکب\n۲. شماره تماس معتبر\n۳. نشانی دقیق و موقعیت جغرافیایی\n۴. تصویر محل اسکان و مدرک مسئولیت موکب\n\nپس از ارسال مشخصات، کارشناس سامانه اطلاعات را بررسی و تأیید خواهد کرد.`,
-        inlineKeyboard: [[{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }]],
+        text: `<b>➕ ثبت موکب و فضاهای اسکان (گام ۱ از ۷):</b>\n\nخادم گرامی، لطفاً شهر محل استقرار موکب خود را انتخاب فرمایید:`,
+        inlineKeyboard: [
+          [
+            { text: "کربلای معلی 🇮🇶", callbackData: "HOST_CITY_کربلای معلی" },
+            { text: "نجف اشرف 🇮🇶", callbackData: "HOST_CITY_نجف اشرف" },
+          ],
+          [
+            { text: "مشهد مقدس 🇮🇷", callbackData: "HOST_CITY_مشهد مقدس" },
+            { text: "قم مقدسه 🇮🇷", callbackData: "HOST_CITY_قم مقدسه" },
+          ],
+          [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+        ],
       };
       await this.editOrSendMessage(message);
+      return;
+    }
 
-      // ارسال اعلان به ربات ادمین
-      if (this.peerAdminWorker) {
-        await this.peerAdminWorker.broadcastToAdmins(
-          `📢 <b>اعلان سامانه:</b>\nکاربری در ربات موکب‌داران وارد بخش ثبت موکب شد (چت: <code>${chatId}</code>).`
-        );
+    // گام ۱: دریافت شهر -> گام ۲: درخواست نام موکب
+    if (callback && callback.startsWith("HOST_CITY_")) {
+      const city = callback.replace("HOST_CITY_", "");
+      const wiz = this.hostWizards.get(chatId) || { step: "CITY", data: {} };
+      wiz.data.city = city;
+      wiz.step = "TITLE";
+      this.hostWizards.set(chatId, wiz);
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: `<b>➕ ثبت موکب (گام ۲ از ۷ - نام موکب):</b>\n\nشهر انتخاب‌شده: <b>${city}</b> ✅\n\nلطفاً <b>نام رسمی موکب، حسینیه یا اقامتگاه</b> خود را به صورت پیام متنی ارسال نمایید:\n<i>(مثال: موکب احباب الرضا علیه‌السلام)</i>`,
+        inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+      });
+      return;
+    }
+
+    // دریافت نام موکب (متن) -> گام ۳: درخواست نام مسئول و شماره تماس
+    const wiz = this.hostWizards.get(chatId);
+    if (wiz && wiz.step === "TITLE" && text.length > 0) {
+      wiz.data.title = text.trim();
+      wiz.step = "CONTACT";
+      this.hostWizards.set(chatId, wiz);
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: `<b>➕ ثبت موکب (گام ۳ از ۷ - مشخصات مسئول):</b>\n\nنام موکب: <b>${wiz.data.title}</b> ✅\n\nلطفاً <b>نام مسئول موکب و شماره همراه</b> هماهنگی را ارسال فرمایید:\n<i>(مثال: حاج علی محمدی 09121111111)</i>`,
+        inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+      });
+      return;
+    }
+
+    // دریافت مسئول و تماس (متن) -> گام ۴: درخواست نشانی دقیق
+    if (wiz && wiz.step === "CONTACT" && text.length > 0) {
+      wiz.data.contactName = text.trim();
+      wiz.data.contactPhone = text.trim();
+      wiz.step = "ADDRESS";
+      this.hostWizards.set(chatId, wiz);
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: `<b>➕ ثبت موکب (گام ۴ از ۷ - نشانی دقیق):</b>\n\nمسئول و تماس: <b>${wiz.data.contactName}</b> ✅\n\nلطفاً <b>نشانی دقیق موکب و موقعیت مکانی</b> را ارسال فرمایید:\n<i>(مثال: شارع قبله الامام الحسین، عمود ۱۴۰)</i>`,
+        inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+      });
+      return;
+    }
+
+    // دریافت نشانی (متن) -> گام ۵: نوع فضاهای اسکان
+    if (wiz && wiz.step === "ADDRESS" && text.length > 0) {
+      wiz.data.address = text.trim();
+      wiz.step = "SUPPLY_TYPE";
+      this.hostWizards.set(chatId, wiz);
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: `<b>➕ ثبت موکب (گام ۵ از ۷ - نوع فضاهای اسکان):</b>\n\nنشانی: <b>${wiz.data.address}</b> ✅\n\nلطفاً نوع فضاهای اقامتی موکب را تعیین فرمایید:`,
+        inlineKeyboard: [
+          [{ text: "سالن‌های عمومی (تفکیک آقایان و بانوان)", callbackData: "HOST_SUPPLY_PUBLIC" }],
+          [{ text: "اتاق‌های خانوادگی مستقل (دربست)", callbackData: "HOST_SUPPLY_PRIVATE" }],
+          [{ text: "ترکیب هر دو (هم سالن و هم اتاق)", callbackData: "HOST_SUPPLY_BOTH" }],
+          [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+        ],
+      });
+      return;
+    }
+
+    // گام ۵: انتخاب نوع فضا -> درخواست تعیین ظرفیت
+    if (callback && callback.startsWith("HOST_SUPPLY_")) {
+      const supply = callback.replace("HOST_SUPPLY_", "") as "PUBLIC" | "PRIVATE" | "BOTH";
+      const currentWiz = this.hostWizards.get(chatId);
+      if (currentWiz) {
+        currentWiz.data.supplyType = supply;
+        currentWiz.step = "CAPACITY";
+        this.hostWizards.set(chatId, currentWiz);
+
+        if (supply === "PUBLIC") {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ تعیین ظرفیت سالن‌های عمومی:</b>\n\nظرفیت کل پذیرش در هر شب را انتخاب نمایید (به تساوی میان سالن برادران و خواهران تقسیم می‌شود):`,
+            inlineKeyboard: [
+              [
+                { text: "۵۰ نفر (۲۵ آقا / ۲۵ خانم)", callbackData: "HOST_CAP_50" },
+                { text: "۱۰۰ نفر (۵۰ آقا / ۵۰ خانم)", callbackData: "HOST_CAP_100" },
+              ],
+              [
+                { text: "۲۰۰ نفر (۱۰۰ آقا / ۱۰۰ خانم)", callbackData: "HOST_CAP_200" },
+                { text: "۵۰۰ نفر (۲۵۰ آقا / ۲۵۰ خانم)", callbackData: "HOST_CAP_500" },
+              ],
+              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        } else if (supply === "PRIVATE") {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ تعیین تعداد و ظرفیت اتاق‌های دربست:</b>\n\nتعداد اتاق‌ها و ظرفیت هر اتاق خانوادگی را انتخاب فرمایید:`,
+            inlineKeyboard: [
+              [
+                { text: "۵ اتاق ۴ نفره (۲۰ نفر)", callbackData: "HOST_ROOMS_5_4" },
+                { text: "۱۰ اتاق ۴ نفره (۴۰ نفر)", callbackData: "HOST_ROOMS_10_4" },
+              ],
+              [
+                { text: "۵ اتاق ۶ نفره (۳۰ نفر)", callbackData: "HOST_ROOMS_5_6" },
+                { text: "۱۰ اتاق ۶ نفره (۶۰ نفر)", callbackData: "HOST_ROOMS_10_6" },
+              ],
+              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        } else {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ تعیین ظرفیت سالن‌ها و اتاق‌ها:</b>\n\nترکیب ظرفیت مورد نظر خود را انتخاب نمایید:`,
+            inlineKeyboard: [
+              [{ text: "۱۰۰ نفر سالن + ۵ اتاق ۴ نفره", callbackData: "HOST_BOTH_100_5_4" }],
+              [{ text: "۲۰۰ نفر سالن + ۱۰ اتاق ۴ نفره", callbackData: "HOST_BOTH_200_10_4" }],
+              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        }
       }
+    }
+
+    // دریافت دکمه ظرفیت -> گام ۶: مدل مالی
+    if (callback && (callback.startsWith("HOST_CAP_") || callback.startsWith("HOST_ROOMS_") || callback.startsWith("HOST_BOTH_"))) {
+      const currentWiz = this.hostWizards.get(chatId);
+      if (currentWiz) {
+        if (callback.startsWith("HOST_CAP_")) {
+          currentWiz.data.hallCapacity = Number(callback.replace("HOST_CAP_", ""));
+        } else if (callback.startsWith("HOST_ROOMS_")) {
+          const parts = callback.replace("HOST_ROOMS_", "").split("_");
+          currentWiz.data.roomCount = Number(parts[0]);
+          currentWiz.data.roomCapacity = Number(parts[1]);
+        } else if (callback.startsWith("HOST_BOTH_")) {
+          const parts = callback.replace("HOST_BOTH_", "").split("_");
+          currentWiz.data.hallCapacity = Number(parts[0]);
+          currentWiz.data.roomCount = Number(parts[1]);
+          currentWiz.data.roomCapacity = Number(parts[2]);
+        }
+
+        currentWiz.step = "FINANCIAL";
+        this.hostWizards.set(chatId, currentWiz);
+
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب (گام ۶ از ۷ - مدل مالی و خدمات):</b>\n\nمدل ارائه خدمات اسکان را تعیین فرمایید:`,
+          inlineKeyboard: [
+            [{ text: "رایگان و صلواتی 💚", callbackData: "HOST_FIN_FREE" }],
+            [{ text: "هزینه ثابت (شبی ۵۰ هزار تومان) 💰", callbackData: "HOST_FIN_FEE_50000" }],
+            [{ text: "هزینه ثابت (شبی ۱۰۰ هزار تومان) 💰", callbackData: "HOST_FIN_FEE_100000" }],
+            [{ text: "تضمین حسن انجام کار (امانت ۲۰۰ هزار تومان) 🛡", callbackData: "HOST_FIN_DEP_200000" }],
+            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+    }
+
+    // گام ۶: مدل مالی -> گام ۷: شیوه تأیید
+    if (callback && callback.startsWith("HOST_FIN_")) {
+      const currentWiz = this.hostWizards.get(chatId);
+      if (currentWiz) {
+        if (callback === "HOST_FIN_FREE") {
+          currentWiz.data.financialModel = "FREE";
+          currentWiz.data.feeAmountToman = 0;
+          currentWiz.data.depositAmountToman = 0;
+        } else if (callback.startsWith("HOST_FIN_FEE_")) {
+          currentWiz.data.financialModel = "FIXED_FEE";
+          currentWiz.data.feeAmountToman = Number(callback.replace("HOST_FIN_FEE_", ""));
+          currentWiz.data.depositAmountToman = 0;
+        } else if (callback.startsWith("HOST_FIN_DEP_")) {
+          currentWiz.data.financialModel = "FIXED_DEPOSIT";
+          currentWiz.data.depositAmountToman = Number(callback.replace("HOST_FIN_DEP_", ""));
+          currentWiz.data.feeAmountToman = 0;
+        }
+
+        currentWiz.step = "APPROVAL";
+        this.hostWizards.set(chatId, currentWiz);
+
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
+          inlineKeyboard: [
+            [{ text: "⚡️ تأیید فوری و خودکار (رزرو قطعی آنی)", callbackData: "HOST_APP_INSTANT" }],
+            [{ text: "⏳ تأیید دستی (با بررسی و پذیرش من)", callbackData: "HOST_APP_MANUAL" }],
+            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+    }
+
+    // گام ۷: شیوه تأیید -> پیش‌نمایش نهایی
+    if (callback && callback.startsWith("HOST_APP_")) {
+      const currentWiz = this.hostWizards.get(chatId);
+      if (currentWiz) {
+        currentWiz.data.approvalMode = callback.replace("HOST_APP_", "") as "INSTANT" | "MANUAL";
+        currentWiz.step = "CONFIRM";
+        this.hostWizards.set(chatId, currentWiz);
+
+        const d = currentWiz.data;
+        const supplyLabel = d.supplyType === "PUBLIC" ? "سالن عمومی" : d.supplyType === "PRIVATE" ? "اتاق‌های دربست" : "ترکیب سالن و اتاق";
+        const capLabel = d.hallCapacity ? `${d.hallCapacity} نفر در سالن` : "";
+        const roomsLabel = d.roomCount ? `${d.roomCount} اتاق ${d.roomCapacity} نفره` : "";
+        const combinedCap = [capLabel, roomsLabel].filter(Boolean).join(" + ");
+        const finLabel = d.financialModel === "FREE" ? "کاملاً رایگان 💚" : d.financialModel === "FIXED_FEE" ? `هزینه شبی ${d.feeAmountToman?.toLocaleString('fa-IR')} تومان` : `تضمین ${d.depositAmountToman?.toLocaleString('fa-IR')} تومان`;
+        const appLabel = d.approvalMode === "INSTANT" ? "تأیید فوری و خودکار ⚡️" : "بررسی و تأیید دستی ⏳";
+
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `📋 <b>پیش‌نمایش پرونده موکب جهت ثبت:</b>\n\n• <b>نام موکب:</b> ${d.title}\n• <b>شهر زیارتی:</b> ${d.city}\n• <b>مسئول و تماس:</b> ${d.contactName}\n• <b>نشانی:</b> ${d.address}\n• <b>نوع فضا:</b> ${supplyLabel}\n• <b>ظرفیت فضاها:</b> ${combinedCap}\n• <b>مدل مالی:</b> ${finLabel}\n• <b>شیوه تأیید رزرو:</b> ${appLabel}\n\nجهت ثبت قطعی و ارسال به کارتابل ادمین روی دکمه زیر کلیک نمایید:`,
+          inlineKeyboard: [
+            [{ text: "✅ تأیید نهایی و ثبت موکب", callbackData: "HOST_SUBMIT_PLACE" }],
+            [{ text: "❌ انصراف و لغو", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+    }
+
+    // ثبت قطعی در دیتابیس
+    if (callback === "HOST_SUBMIT_PLACE") {
+      const currentWiz = this.hostWizards.get(chatId);
+      if (currentWiz && currentWiz.data.title) {
+        const d = currentWiz.data;
+        try {
+          const place = await this.inventoryService.registerMokabPlace({
+            hostPersonId: hostId,
+            title: d.title!,
+            city: d.city || "کربلای معلی",
+            address: d.address || "نامشخص",
+            contactName: d.contactName || "مسئول موکب",
+            contactPhone: d.contactPhone || "09120000000",
+            placePhotoPath: "default_place.jpg",
+            responsibilityDocumentPath: "default_doc.pdf",
+            supplyType: d.supplyType || "PUBLIC",
+            financialModel: d.financialModel || "FREE",
+            feeAmountToman: d.feeAmountToman,
+            depositAmountToman: d.depositAmountToman,
+            approvalMode: d.approvalMode || "INSTANT",
+          });
+
+          // ثبت فضاها
+          if (d.hallCapacity && d.hallCapacity > 0) {
+            const half = Math.floor(d.hallCapacity / 2);
+            await this.inventoryService.registerPublicHall(place.id, "سالن برادران", "MEN", half);
+            await this.inventoryService.registerPublicHall(place.id, "سالن خواهران", "WOMEN", d.hallCapacity - half);
+          }
+          if (d.roomCount && d.roomCount > 0 && d.roomCapacity) {
+            await this.inventoryService.registerPrivateRoomsBatch(place.id, "اتاق خانوادگی", d.roomCount, d.roomCapacity);
+          }
+
+          this.hostWizards.delete(chatId);
+
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `✅ <b>موکب شما با موفقیت ثبت گردید!</b>\n\n🏷 <b>کد رهگیری پرونده:</b> <code>${place.id}</code>\n📋 <b>وضعیت:</b> در انتظار بررسی و تأیید مدیریت (PENDING) ⏳\n\nبه محض بررسی و تأیید توسط ادمین، اقامتگاه فعال شده و در بخش جست‌وجوی زائران قرار خواهد گرفت.`,
+            inlineKeyboard: [
+              [{ text: "📊 مشاهده وضعیت موکب‌های من", callbackData: "ROOMS_STATUS" }],
+              [{ text: "➕ ثبت موکب دیگر", callbackData: "REGISTER_HOST" }],
+              [{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }],
+            ],
+          });
+
+          // ارسال اعلان مستقیم و زنده به ربات ادمین
+          if (this.peerAdminWorker) {
+            await this.peerAdminWorker.broadcastToAdmins(
+              `🚨 <b>موکب جدید در انتظار بررسی ثبت شد:</b>\n\n` +
+              `• <b>نام:</b> ${place.title}\n` +
+              `• <b>شهر:</b> ${place.city}\n` +
+              `• <b>مسئول و تماس:</b> ${place.contactName} (${place.contactPhone})\n` +
+              `• <b>نشانی:</b> ${place.address}\n` +
+              `• <b>شناسه:</b> <code>${place.id}</code>`,
+              [
+                [{ text: "✅ تأیید این موکب", callbackData: `APPROVE_PLACE_${place.id}` }],
+                [{ text: "❌ رد پرونده", callbackData: `REJECT_PLACE_${place.id}` }],
+              ]
+            );
+          }
+          return;
+        } catch (err: any) {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `خطا در ثبت موکب: ${err.message}`,
+            inlineKeyboard: [[{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }]],
+          });
+          return;
+        }
+      }
+    }
+
+    // کارتابل وضعیت سالن‌ها و اتاق‌ها
+    if (callback === "ROOMS_STATUS") {
+      const allPlaces = await this.inventoryService.getAllPlaces();
+      const hostPlaces = allPlaces.filter(p => p.hostPersonId === hostId);
+
+      if (hostPlaces.length === 0) {
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>📊 وضعیت سالن‌ها و اتاق‌ها:</b>\n\nشما هنوز هیچ موکبی در سامانه ثبت نکرده‌اید.\nجهت ثبت اولین موکب خود روی دکمه «➕ ثبت موکب و ظرفیت جدید» کلیک فرمایید.`,
+          inlineKeyboard: [
+            [{ text: "➕ ثبت موکب و ظرفیت جدید", callbackData: "REGISTER_HOST" }],
+            [{ text: "🔙 منوی اصلی موکب‌دار", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+
+      let textReport = `<b>📊 لیست موکب‌ها و فضاهای ثبت‌شده شما (${hostPlaces.length} موکب):</b>\n\n`;
+      for (const [idx, p] of hostPlaces.entries()) {
+        const spaces = await this.inventoryService.getSpacesByPlaceId(p.id);
+        const halls = spaces.filter(s => s.spaceType === "PUBLIC_HALL");
+        const rooms = spaces.filter(s => s.spaceType === "PRIVATE_ROOM");
+        const totalCap = spaces.reduce((sum, s) => sum + s.nominalCapacity, 0);
+
+        const statusBadge = p.status === "APPROVED" ? "تأییدشده و فعال ✅" : p.status === "PENDING" ? "در صف بررسی ادمین ⏳" : "ردشده ❌";
+        textReport += `${idx + 1}. <b>${p.title}</b> (${p.city})\n`;
+        textReport += `   • وضعیت: ${statusBadge}\n`;
+        textReport += `   • فضاها: ${halls.length} سالن عمومی، ${rooms.length} اتاق دربست (ظرفیت کل: ${totalCap} نفر)\n`;
+        textReport += `   • کد پرونده: <code>${p.id}</code>\n\n`;
+      }
+
+      await this.editOrSendMessage({
+        chatId,
+        messageId,
+        text: textReport,
+        inlineKeyboard: [
+          [{ text: "➕ ثبت موکب جدید", callbackData: "REGISTER_HOST" }],
+          [{ text: "🔄 به‌روزرسانی وضعیت", callbackData: "ROOMS_STATUS" }],
+          [{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }],
+        ],
+      });
       return;
     }
 
     if (callback === "PENDING_REQUESTS") {
-      const message = {
+      await this.editOrSendMessage({
         chatId,
         messageId,
-        text: `<b>📋 کارتابل درخواست‌های رزرو:</b>\n\nدر حال حاضر درخواست جدیدی در انتظار تأیید شما نیست.\nبه محض ثبت درخواست جدید توسط زائران، اعلان آن برای شما ارسال خواهد شد.`,
+        text: `<b>📋 کارتابل درخواست‌های رزرو مسافران:</b>\n\nدر حال حاضر درخواست جدیدی در انتظار بررسی شما وجود ندارد ✅\nبه محض ثبت رزرو دستی جدید توسط زائران، اعلان آن برای شما ارسال خواهد شد.`,
         inlineKeyboard: [[{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }]],
-      };
-      await this.editOrSendMessage(message);
-      return;
-    }
-
-    if (callback === "ROOMS_STATUS") {
-      const message = {
-        chatId,
-        messageId,
-        text: `<b>📊 وضعیت ظرفیت موکب:</b>\n\nانواع اقامتگاه‌ها:\n• سالن‌های عمومی (تفکیک آقایان و بانوان)\n• اتاق‌های مستقل خانوادگی (دربست)\n\nتمامی تقویم‌ها به صورت لحظه‌ای با سامانه مرکزی همگام هستند.`,
-        inlineKeyboard: [[{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }]],
-      };
-      await this.editOrSendMessage(message);
+      });
       return;
     }
 
     if (callback === "RECEIPTS_INBOX") {
-      const message = {
+      await this.editOrSendMessage({
         chatId,
         messageId,
         text: `<b>💳 کارتابل بررسی فیش‌های واریزی:</b>\n\nهیچ فیش جدیدی در صف بررسی وجود ندارد.\n(طبق قوانین، بررسی فیش‌ها منحصراً توسط شخص موکب‌دار انجام می‌شود).`,
         inlineKeyboard: [[{ text: "🔙 بازگشت به منوی موکب‌دار", callbackData: "HOST_MENU" }]],
-      };
-      await this.editOrSendMessage(message);
+      });
       return;
     }
 

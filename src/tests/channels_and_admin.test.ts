@@ -551,4 +551,285 @@ describe('MASTER-22 — آزمون‌های درگاه‌های پیام‌رس�
     // باید دقیقا همان پیام قبلی ویرایش شود
     expect(editedMessageId).toBe(9988);
   });
+
+  test('WIZ-01: ویزارد مرحله‌ای ثبت موکب در ربات موکب‌داران از انتخاب شهر تا ثبت قطعی (DEC-0049)', async () => {
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_token',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+    adminWorker.addAuthenticatedAdmin('admin-chat-1');
+    hostWorker.setPeerAdminWorker(adminWorker);
+
+    let lastSentText = '';
+    (hostWorker as any).editOrSendMessage = async (params: any) => {
+      lastSentText = params.text;
+    };
+
+    const hostChatId = 'host-chat-100';
+
+    // گام ۱: کلیک ثبت موکب
+    await (hostWorker as any).handleUpdate({
+      update_id: 10001,
+      callback_query: {
+        id: 'cb_reg',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'REGISTER_HOST',
+      },
+    });
+    expect(lastSentText).toContain('گام ۱ از ۷');
+
+    // گام ۱ انتخاب شهر
+    await (hostWorker as any).handleUpdate({
+      update_id: 10002,
+      callback_query: {
+        id: 'cb_city',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'HOST_CITY_کربلای معلی',
+      },
+    });
+    expect(lastSentText).toContain('گام ۲ از ۷');
+
+    // گام ۲ ارسال نام موکب به صورت تکست
+    await (hostWorker as any).handleUpdate({
+      update_id: 10003,
+      message: { message_id: 2, chat: { id: hostChatId }, from: { id: 100 }, text: 'موکب انصار الحسین علیه‌السلام' },
+    });
+    expect(lastSentText).toContain('گام ۳ از ۷');
+
+    // گام ۳ ارسال نام مسئول و شماره تماس
+    await (hostWorker as any).handleUpdate({
+      update_id: 10004,
+      message: { message_id: 3, chat: { id: hostChatId }, from: { id: 100 }, text: 'حاج رضا کریمی 09129999999' },
+    });
+    expect(lastSentText).toContain('گام ۴ از ۷');
+
+    // گام ۴ ارسال نشانی دقیق
+    await (hostWorker as any).handleUpdate({
+      update_id: 10005,
+      message: { message_id: 4, chat: { id: hostChatId }, from: { id: 100 }, text: 'شارع میثم تمار، عمود ۳۰۰' },
+    });
+    expect(lastSentText).toContain('گام ۵ از ۷');
+
+    // گام ۵ انتخاب سالن عمومی
+    await (hostWorker as any).handleUpdate({
+      update_id: 10006,
+      callback_query: {
+        id: 'cb_supply',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'HOST_SUPPLY_PUBLIC',
+      },
+    });
+    expect(lastSentText).toContain('تعیین ظرفیت سالن‌های عمومی');
+
+    // گام تعیین ظرفیت: ۱۰۰ نفر
+    await (hostWorker as any).handleUpdate({
+      update_id: 10007,
+      callback_query: {
+        id: 'cb_cap',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'HOST_CAP_100',
+      },
+    });
+    expect(lastSentText).toContain('گام ۶ از ۷');
+
+    // گام ۶ انتخاب مدل رایگان
+    await (hostWorker as any).handleUpdate({
+      update_id: 10008,
+      callback_query: {
+        id: 'cb_fin',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'HOST_FIN_FREE',
+      },
+    });
+    expect(lastSentText).toContain('گام ۷ از ۷');
+
+    // گام ۷ انتخاب تأیید فوری
+    await (hostWorker as any).handleUpdate({
+      update_id: 10009,
+      callback_query: {
+        id: 'cb_app',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'HOST_APP_INSTANT',
+      },
+    });
+    expect(lastSentText).toContain('پیش‌نمایش پرونده موکب');
+
+    // ثبت نهایی و قطعی
+    await (hostWorker as any).handleUpdate({
+      update_id: 10010,
+      callback_query: {
+        id: 'cb_submit',
+        from: { id: 100 },
+        message: { chat: { id: hostChatId }, message_id: 1 },
+        data: 'HOST_SUBMIT_PLACE',
+      },
+    });
+    expect(lastSentText).toContain('موکب شما با موفقیت ثبت گردید');
+
+    // راستی‌آزمایی در دیتابیس InventoryService
+    const allPlaces = await inventoryService.getAllPlaces();
+    const registered = allPlaces.find(p => p.title === 'موکب انصار الحسین علیه‌السلام');
+    expect(registered).toBeDefined();
+    expect(registered?.status).toBe('PENDING');
+    expect(registered?.city).toBe('کربلای معلی');
+
+    // بررسی سالن‌ها
+    const spaces = await inventoryService.getSpacesByPlaceId(registered!.id);
+    expect(spaces.length).toBe(2); // سالن برادران و خواهران
+    expect(spaces.reduce((s, x) => s + x.nominalCapacity, 0)).toBe(100);
+  });
+
+  test('WIZ-02: بررسی کارتابل وضعیت سالن‌ها و اتاق‌ها (ROOMS_STATUS) برای موکب‌دار (DEC-0049)', async () => {
+    // ثبت موکب تستی برای موکب‌دار با شناسه ۱۰۰
+    const testPlace = await inventoryService.registerMokabPlace({
+      hostPersonId: '100',
+      title: 'موکب انصار الحسین علیه‌السلام',
+      city: 'کربلای معلی',
+      address: 'شارع میثم تمار، عمود ۳۰۰',
+      contactName: 'حاج رضا کریمی',
+      contactPhone: '09129999999',
+      placePhotoPath: 'default_place.jpg',
+      responsibilityDocumentPath: 'default_doc.pdf',
+      supplyType: 'PUBLIC',
+      financialModel: 'FREE',
+      approvalMode: 'INSTANT',
+    });
+    await inventoryService.registerPublicHall(testPlace.id, 'سالن عمومی برادران', 'MEN', 50);
+    await inventoryService.registerPublicHall(testPlace.id, 'سالن عمومی خواهران', 'WOMEN', 50);
+
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_token',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let statusReportText = '';
+    (hostWorker as any).editOrSendMessage = async (params: any) => {
+      statusReportText = params.text;
+    };
+
+    // کاربر درخواست کارتابل موکب‌های خود را می‌دهد
+    await (hostWorker as any).handleUpdate({
+      update_id: 10020,
+      callback_query: {
+        id: 'cb_rooms',
+        from: { id: 100 },
+        message: { chat: { id: 'host-chat-100' }, message_id: 1 },
+        data: 'ROOMS_STATUS',
+      },
+    });
+
+    expect(statusReportText).toContain('موکب انصار الحسین علیه‌السلام');
+    expect(statusReportText).toContain('در صف بررسی ادمین');
+  });
+
+  test('WIZ-03: تأیید موکب توسط ادمین و سپس جست‌وجو و رزرو زائر در تلگرام (DEC-0049)', async () => {
+    // ثبت موکب در صف بررسی
+    const targetPlace = await inventoryService.registerMokabPlace({
+      hostPersonId: '100',
+      title: 'موکب انصار الحسین علیه‌السلام',
+      city: 'کربلای معلی',
+      address: 'شارع میثم تمار، عمود ۳۰۰',
+      contactName: 'حاج رضا کریمی',
+      contactPhone: '09129999999',
+      placePhotoPath: 'default_place.jpg',
+      responsibilityDocumentPath: 'default_doc.pdf',
+      supplyType: 'PUBLIC',
+      financialModel: 'FREE',
+      approvalMode: 'INSTANT',
+    });
+    await inventoryService.registerPublicHall(targetPlace.id, 'سالن برادران', 'MEN', 50);
+
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+    adminWorker.addAuthenticatedAdmin('admin-chat-1');
+
+    // ۱. ادمین موکب را تأیید می‌کند
+    await (adminWorker as any).handleUpdate({
+      update_id: 10030,
+      callback_query: {
+        id: 'cb_approve',
+        from: { id: 1 },
+        message: { chat: { id: 'admin-chat-1' }, message_id: 10 },
+        data: `APPROVE_PLACE_${targetPlace.id}`,
+      },
+    });
+
+    const approvedPlace = await inventoryService.getPlaceById(targetPlace.id);
+    expect(approvedPlace?.status).toBe('APPROVED');
+
+    // ۲. زائر در بات مسافران جست‌وجوی کربلا را می‌زند
+    const travelerWorker = new TelegramBotWorker({
+      token: 'mock_traveler_token',
+      role: 'TRAVELER',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let travelerReply = '';
+    (travelerWorker as any).editOrSendMessage = async (params: any) => {
+      travelerReply = params.text;
+    };
+
+    await (travelerWorker as any).handleUpdate({
+      update_id: 10031,
+      callback_query: {
+        id: 'cb_search_karbala',
+        from: { id: 777 },
+        message: { chat: { id: 'traveler-777' }, message_id: 20 },
+        data: 'TRAVELER_CITY_کربلای معلی',
+      },
+    });
+
+    // باید موکب تأییدشده در نتایج بیاید
+    expect(travelerReply).toContain('موکب انصار الحسین علیه‌السلام');
+
+    // ۳. زائر درخواست رزرو ثبت می‌کند
+    await (travelerWorker as any).handleUpdate({
+      update_id: 10032,
+      callback_query: {
+        id: 'cb_dobook',
+        from: { id: 777 },
+        message: { chat: { id: 'traveler-777' }, message_id: 20 },
+        data: `TRAVELER_DOBOOK_${targetPlace.id}_2`,
+      },
+    });
+
+    expect(travelerReply).toContain('درخواست اسکان شما با موفقیت ثبت شد');
+    expect(travelerReply).toContain('کد رهگیری رزرو');
+
+    // ۴. زائر پیگیری رزروهای من را می‌زند
+    await (travelerWorker as any).handleUpdate({
+      update_id: 10033,
+      callback_query: {
+        id: 'cb_my_res',
+        from: { id: 777 },
+        message: { chat: { id: 'traveler-777' }, message_id: 20 },
+        data: 'MY_RESERVATIONS',
+      },
+    });
+
+    expect(travelerReply).toContain('لیست رزروهای شما');
+    expect(travelerReply).toContain('موکب انصار الحسین علیه‌السلام');
+  });
 });
