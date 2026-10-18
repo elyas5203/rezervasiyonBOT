@@ -59,6 +59,8 @@
 | کانتینرسازی داکر و شبیه‌سازی محلی | docs/ai/masters/MASTER_24_DOCKER_CONTAINERIZATION_AND_LOCAL_ISOLATION.md#L1-L125 — «داکر، ایمیج سبک، ایزولاسیون محلی و بررسی سلامت» |
 | تحویل فاز اول و ممیزی جامع انطباق | docs/ai/masters/MASTER_25_PHASE_ONE_HANDOVER_AND_AUDIT.md#L1-L120 — «تحویل فاز اول، ممیزی نقش‌ها، ماتریس انطباق DEC و راهنمای اجرا» |
 | تخصیص پورت‌های سرور و همگام‌سازی VPS | docs/ai/masters/MASTER_26_SAFE_VPS_SYNC_AND_PORT_ALLOCATION.md#L1-L90 — «تخصیص پورت‌های ۳۰۸۰ و ۳۰۸۱، همگام‌سازی مخزن و آزمون سلامت بات‌ها» |
+| استقرار زنده ربات‌های تلگرام زائر و موکب‌دار | docs/ai/masters/MASTER_27_LIVE_TELEGRAM_BOTS_DEPLOYMENT.md#L1-L96 — «راه‌اندازی ورکر پولینگ تلگرام، سلامت سرور و پاسخگویی زنده» |
+| ربات تلگرام ادمین و رمز عبور | docs/ai/masters/MASTER_28_ADMIN_TELEGRAM_BOT.md#L1-L85 — «احراز هویت admin110، کارتابل موکب‌ها، گزارش آماری و پخش اعلانات» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
@@ -84,6 +86,7 @@
 | انتخاب ابزار gstack برای این پروژه | docs/ai/DECISIONS.md#L292-L298 — «DEC-0042» |
 | اولین ورود و زمان گرفتن شماره | docs/ai/DECISIONS.md#L299-L305 — «DEC-0043» |
 | اجازه شروع محلی مرحله‌ای | docs/ai/DECISIONS.md#L306-L312 — «DEC-0044» |
+| پورت سرور، استقرار زنده و بات ادمین | docs/ai/DECISIONS.md#L313-L335 — «DEC-0045 تا DEC-0047» |
 | پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-15» |
 | وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L33 — «Current state / روش شروع شیفت» |
 | تاریخچه | docs/ai/CHANGELOG.md#L1-L92 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |
