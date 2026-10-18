@@ -9,6 +9,7 @@ import {
   TelegramAdapter,
   BaleAdapter,
 } from '../channels/channel-adapter';
+import { TelegramBotWorker } from '../channels/telegram-worker';
 import { OutboundMessage } from '../channels/types';
 import {
   AdminAuthService,
@@ -306,5 +307,55 @@ describe('MASTER-22 — آزمون‌های درگاه‌های پیام‌رس�
     // ثبت ممیزی رسیدگی به تعطیلی اضطراری
     const auditLogs = await adminService.getAuditLogs(sessionSuper.sessionId);
     expect(auditLogs.some(a => a.action === 'EMERGENCY_INSPECT' && a.targetId === mokab.id)).toBe(true);
+  });
+
+  // ----------------------------------------------------
+  // ۴. آزمون‌های ورکر ربات تلگرام (TelegramBotWorker)
+  // ----------------------------------------------------
+  test('BOT-01: سازنده ورکر زائر و موکب‌دار با تنظیمات مناسب راه‌اندازی و متوقف می‌شود', async () => {
+    const travelerWorker = new TelegramBotWorker({
+      token: 'mock_traveler_token',
+      role: 'TRAVELER',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    expect(travelerWorker.role).toBe('TRAVELER');
+    expect(travelerWorker.token).toBe('mock_traveler_token');
+
+    // شروع و توقف امن با توکن ماک
+    await travelerWorker.start();
+    travelerWorker.stop();
+
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_token',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    expect(hostWorker.role).toBe('HOST');
+    expect(hostWorker.token).toBe('mock_host_token');
+    await hostWorker.start();
+    hostWorker.stop();
+  });
+
+  test('BOT-02: ارسال پیام خروجی تلگرام ساختار معتبر با parse_mode و کیبورد شیشه‌ای تولید می‌کند', () => {
+    const outbound: OutboundMessage = {
+      chatId: '123456',
+      text: 'سلام زائر گرامی',
+      inlineKeyboard: [
+        [{ text: '🔍 جست‌وجو', callbackData: 'SEARCH' }],
+        [{ text: '🔙 بازگشت', callbackData: 'BACK' }],
+      ],
+    };
+
+    const formatted = telegramAdapter.formatOutbound(outbound);
+    expect(formatted.chat_id).toBe('123456');
+    expect(formatted.text).toBe('سلام زائر گرامی');
+    expect(formatted.parse_mode).toBe('HTML');
+    expect(formatted.reply_markup.inline_keyboard.length).toBe(2);
+    expect(formatted.reply_markup.inline_keyboard[0][0].text).toBe('🔍 جست‌وجو');
+    expect(formatted.reply_markup.inline_keyboard[0][0].callback_data).toBe('SEARCH');
   });
 });

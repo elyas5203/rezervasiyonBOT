@@ -1,9 +1,15 @@
 import { TelegramAdapter, BaleAdapter, MessageDeduplicator } from "./channels/channel-adapter";
+import { TelegramBotWorker } from "./channels/telegram-worker";
 import { AdminAuthService, AdminManagementService } from "./admin/admin-service";
+import { IdentityService } from "./core/identity/identity-service";
+import { InventoryService } from "./core/inventory/inventory-service";
 
 export interface AppServerConfig {
   port?: number;
   adminSecret?: string;
+  travelerBotToken?: string;
+  hostBotToken?: string;
+  autoStartWorkers?: boolean;
 }
 
 export function createAppServer(config: AppServerConfig = {}) {
@@ -13,6 +19,54 @@ export function createAppServer(config: AppServerConfig = {}) {
   const baleAdapter = new BaleAdapter(deduplicator);
   const adminAuth = new AdminAuthService(config.adminSecret ?? process.env.ADMIN_WEBVIEW_SECRET ?? "default_dev_secret");
   const adminMgmt = new AdminManagementService();
+  const identityService = new IdentityService();
+  const inventoryService = new InventoryService();
+
+  const travelerToken = config.travelerBotToken ?? process.env.TELEGRAM_TRAVELER_BOT_TOKEN;
+  const hostToken = config.hostBotToken ?? process.env.TELEGRAM_HOST_BOT_TOKEN;
+
+  let travelerWorker: TelegramBotWorker | null = null;
+  let hostWorker: TelegramBotWorker | null = null;
+
+  if (travelerToken && !travelerToken.includes("mock")) {
+    travelerWorker = new TelegramBotWorker({
+      token: travelerToken,
+      role: "TRAVELER",
+      adapter: telegramAdapter,
+      identityService,
+      inventoryService,
+    });
+  }
+
+  if (hostToken && !hostToken.includes("mock")) {
+    hostWorker = new TelegramBotWorker({
+      token: hostToken,
+      role: "HOST",
+      adapter: telegramAdapter,
+      identityService,
+      inventoryService,
+    });
+  }
+
+  const startWorkers = async () => {
+    if (travelerWorker) {
+      await travelerWorker.start();
+    }
+    if (hostWorker) {
+      await hostWorker.start();
+    }
+  };
+
+  const stopWorkers = () => {
+    if (travelerWorker) travelerWorker.stop();
+    if (hostWorker) hostWorker.stop();
+  };
+
+  if (config.autoStartWorkers) {
+    startWorkers().catch((err) => {
+      console.error("[Rezervasiyon Bot Server] Failed to auto-start bot workers:", err);
+    });
+  }
 
   const server = Bun.serve({
     port,
@@ -66,9 +120,16 @@ export function createAppServer(config: AppServerConfig = {}) {
   return {
     server,
     port: server.port,
-    stop: () => server.stop(),
+    stop: () => {
+      stopWorkers();
+      server.stop();
+    },
+    startWorkers,
+    stopWorkers,
     adminAuth,
     adminMgmt,
+    travelerWorker,
+    hostWorker,
   };
 }
 
@@ -76,6 +137,10 @@ export function createAppServer(config: AppServerConfig = {}) {
 if (import.meta.main) {
   const app = createAppServer();
   console.log(`[Rezervasiyon Bot Server] Running on http://localhost:${app.port}`);
+
+  app.startWorkers().catch((err) => {
+    console.error("[Rezervasiyon Bot Server] Error starting bot workers:", err);
+  });
 
   const handleShutdown = () => {
     console.log("[Rezervasiyon Bot Server] Gracefully shutting down...");
