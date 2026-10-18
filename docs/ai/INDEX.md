@@ -54,6 +54,7 @@
 | چهار مسیر رزرو و چرخه حیات مسافر | docs/ai/masters/MASTER_19_RESERVATION_LIFECYCLE_AND_BOOKING.md#L1-L150 — «چهار مسیر رزرو، گذرنامه خارجی و ماشین وضعیت» |
 | سیستم مالی، کارت‌به‌کارت و رسید | docs/ai/masters/MASTER_20_BILLING_RECEIPTS_AND_PAYMENTS.md#L1-L140 — «مدل‌های مالی، فیش کارت‌به‌کارت و تطبیق دستی» |
 | اقامت، لغو، عدم حضور و کارهای موعددار | docs/ai/masters/MASTER_21_STAY_OPERATIONS_AND_TIMED_JOBS.md#L1-L140 — «ورود، خروج، لغو ۲۴ ساعته، عدم حضور، پاکسازی گذرنامه و اعلان» |
+| درگاه‌های پیام‌رسان و وب‌ویو مدیریت | docs/ai/masters/MASTER_22_CHANNELS_AND_ADMIN_WEBVIEW.md#L1-L130 — «تلگرام، بله، عدم تکرار، احراز هویت وب‌ویو، تأیید موکب و ممیزی» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 

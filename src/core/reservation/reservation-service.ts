@@ -264,6 +264,13 @@ export class ReservationService {
   }
 
   /**
+   * دریافت تمامی رزروهای یک موکب (جهت بررسی وضعیت و تعطیلی اضطراری)
+   */
+  async getReservationsByPlaceId(placeId: string): Promise<ReservationRequest[]> {
+    return Array.from(this.reservations.values()).filter(r => r.placeId === placeId);
+  }
+
+  /**
    * دریافت رزرو بر اساس شناسه
    */
   async getReservationById(reservationId: string): Promise<ReservationRequest | undefined> {
