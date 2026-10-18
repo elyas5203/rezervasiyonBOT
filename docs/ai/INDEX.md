@@ -56,6 +56,7 @@
 | اقامت، لغو، عدم حضور و کارهای موعددار | docs/ai/masters/MASTER_21_STAY_OPERATIONS_AND_TIMED_JOBS.md#L1-L140 — «ورود، خروج، لغو ۲۴ ساعته، عدم حضور، پاکسازی گذرنامه و اعلان» |
 | درگاه‌های پیام‌رسان و وب‌ویو مدیریت | docs/ai/masters/MASTER_22_CHANNELS_AND_ADMIN_WEBVIEW.md#L1-L130 — «تلگرام، بله، عدم تکرار، احراز هویت وب‌ویو، تأیید موکب و ممیزی» |
 | آزمون‌های سرتاسری یکپارچه و پذیرش | docs/ai/masters/MASTER_23_END_TO_END_ACCEPTANCE_TESTING.md#L1-L120 — «سناریوهای سرتاسری E2E، پیوستگی سفر زائر، رقابت کانال‌ها و پذیرش» |
+| کانتینرسازی داکر و شبیه‌سازی محلی | docs/ai/masters/MASTER_24_DOCKER_CONTAINERIZATION_AND_LOCAL_ISOLATION.md#L1-L125 — «داکر، ایمیج سبک، ایزولاسیون محلی و بررسی سلامت» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
