@@ -58,6 +58,7 @@
 | آزمون‌های سرتاسری یکپارچه و پذیرش | docs/ai/masters/MASTER_23_END_TO_END_ACCEPTANCE_TESTING.md#L1-L120 — «سناریوهای سرتاسری E2E، پیوستگی سفر زائر، رقابت کانال‌ها و پذیرش» |
 | کانتینرسازی داکر و شبیه‌سازی محلی | docs/ai/masters/MASTER_24_DOCKER_CONTAINERIZATION_AND_LOCAL_ISOLATION.md#L1-L125 — «داکر، ایمیج سبک، ایزولاسیون محلی و بررسی سلامت» |
 | تحویل فاز اول و ممیزی جامع انطباق | docs/ai/masters/MASTER_25_PHASE_ONE_HANDOVER_AND_AUDIT.md#L1-L120 — «تحویل فاز اول، ممیزی نقش‌ها، ماتریس انطباق DEC و راهنمای اجرا» |
+| تخصیص پورت‌های سرور و همگام‌سازی VPS | docs/ai/masters/MASTER_26_SAFE_VPS_SYNC_AND_PORT_ALLOCATION.md#L1-L90 — «تخصیص پورت‌های ۳۰۸۰ و ۳۰۸۱، همگام‌سازی مخزن و آزمون سلامت بات‌ها» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
