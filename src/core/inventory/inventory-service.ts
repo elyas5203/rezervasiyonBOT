@@ -60,6 +60,14 @@ export class InMemoryInventoryRepository implements InventoryRepository {
     return place;
   }
 
+  async getAllPlaces(): Promise<MokabPlace[]> {
+    return Array.from(this.places.values());
+  }
+
+  async getAllSpaces(): Promise<Space[]> {
+    return Array.from(this.spaces.values());
+  }
+
   async findPlaceById(id: string): Promise<MokabPlace | null> {
     return this.places.get(id) || null;
   }
@@ -290,5 +298,23 @@ export class InventoryService {
    */
   async getPlaceById(placeId: string): Promise<MokabPlace | null> {
     return this.repo.findPlaceById(placeId);
+  }
+
+  /**
+   * دریافت تمامی موکب‌ها (جهت آمارگیری و کارتابل مدیریت)
+   */
+  async getAllPlaces(): Promise<MokabPlace[]> {
+    if (this.repo && typeof (this.repo as any).getAllPlaces === 'function') {
+      return (this.repo as any).getAllPlaces();
+    }
+    return [];
+  }
+
+  /**
+   * دریافت موکب‌های منتظر بررسی ادمین (PENDING)
+   */
+  async getPendingPlaces(): Promise<MokabPlace[]> {
+    const all = await this.getAllPlaces();
+    return all.filter(p => p.status === 'PENDING');
   }
 }

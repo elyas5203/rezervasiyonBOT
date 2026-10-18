@@ -358,4 +358,146 @@ describe('MASTER-22 — آزمون‌های درگاه‌های پیام‌رس�
     expect(formatted.reply_markup.inline_keyboard[0][0].text).toBe('🔍 جست‌وجو');
     expect(formatted.reply_markup.inline_keyboard[0][0].callback_data).toBe('SEARCH');
   });
+
+  test('BOT-03: ربات ادمین در بدو ورود با /start یا رمز اشتباه، دسترسی را مسدود نگه می‌دارد', async () => {
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      adminAuthService: authService,
+      inventoryService,
+      reservationService,
+      adminPasskey: 'admin110',
+    });
+
+    expect(adminWorker.getAuthenticatedAdmins()).toEqual([]);
+
+    // ارسال رمز اشتباه
+    await (adminWorker as any).handleUpdate({
+      update_id: 9001,
+      message: { message_id: 1, chat: { id: 55501 }, text: 'wrong_secret' },
+    });
+
+    expect(adminWorker.getAuthenticatedAdmins()).not.toContain('55501');
+  });
+
+  test('BOT-04: ورود با رمز admin110 کاربر را احراز هویت کرده و به لیست ادمین‌ها می‌افزاید', async () => {
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      adminAuthService: authService,
+      inventoryService,
+      reservationService,
+      adminPasskey: 'admin110',
+    });
+
+    // ورود رمز صحیح
+    await (adminWorker as any).handleUpdate({
+      update_id: 9002,
+      message: { message_id: 2, chat: { id: 55501 }, from: { id: 55501 }, text: 'admin110' },
+    });
+
+    expect(adminWorker.getAuthenticatedAdmins()).toContain('55501');
+
+    // خروج با /logout
+    await (adminWorker as any).handleUpdate({
+      update_id: 9003,
+      message: { message_id: 3, chat: { id: 55501 }, text: '/logout' },
+    });
+
+    expect(adminWorker.getAuthenticatedAdmins()).not.toContain('55501');
+  });
+
+  test('BOT-05: گزارش آماری برای ادمین احراز هویت‌شده وضعیت موکب‌ها و سرور را بازمی‌گرداند', async () => {
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      adminAuthService: authService,
+      inventoryService,
+      reservationService,
+      adminPasskey: 'admin110',
+    });
+
+    adminWorker.addAuthenticatedAdmin('55501');
+
+    // درخواست گزارش
+    await expect(
+      (adminWorker as any).handleUpdate({
+        update_id: 9004,
+        callback_query: { id: 'cb1', from: { id: 55501 }, message: { chat: { id: 55501 }, message_id: 4 }, data: 'ADMIN_STATS' },
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  test('BOT-06: ارسال اعلان و برودکست از بات موکب‌دار به تمام ادمین‌های احراز هویت‌شده', async () => {
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      adminAuthService: authService,
+      inventoryService,
+      reservationService,
+      adminPasskey: 'admin110',
+    });
+
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_token',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    hostWorker.setPeerAdminWorker(adminWorker);
+    adminWorker.addAuthenticatedAdmin('admin-chat-99');
+
+    // ارسال اعلان برودکست
+    await expect(adminWorker.broadcastToAdmins('📢 تست اعلان سامانه')).resolves.toBeUndefined();
+  });
+
+  test('BOT-07: تأیید موکب در کارتابل تلگرام وضعیت موکب را از PENDING به APPROVED تغییر می‌دهد', async () => {
+    const adminWorker = new TelegramBotWorker({
+      token: 'mock_admin_token',
+      role: 'ADMIN',
+      adapter: telegramAdapter,
+      adminAuthService: authService,
+      inventoryService,
+      reservationService,
+      adminPasskey: 'admin110',
+    });
+
+    adminWorker.addAuthenticatedAdmin('admin-chat-99');
+
+    // ثبت موکب PENDING
+    const mokab = await inventoryService.registerMokabPlace({
+      hostPersonId: 'host-99',
+      title: 'موکب شهدای مدافع حرم',
+      city: 'نجف',
+      address: 'ثوره العشرین',
+      contactName: 'حاج علی',
+      contactPhone: '09123333333',
+      placePhotoPath: '/photos/p.jpg',
+      responsibilityDocumentPath: '/docs/r.pdf',
+      supplyType: 'PUBLIC',
+      financialModel: 'FREE',
+      approvalMode: 'INSTANT',
+    });
+
+    expect(mokab.status).toBe('PENDING');
+
+    // کلیک دکمه تأیید توسط ادمین در تلگرام
+    await (adminWorker as any).handleUpdate({
+      update_id: 9005,
+      callback_query: {
+        id: 'cb2',
+        from: { id: 99 },
+        message: { chat: { id: 'admin-chat-99' }, message_id: 5 },
+        data: `APPROVE_PLACE_${mokab.id}`,
+      },
+    });
+
+    const updated = await inventoryService.getPlaceById(mokab.id);
+    expect(updated?.status).toBe('APPROVED');
+  });
 });

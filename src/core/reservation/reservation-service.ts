@@ -276,5 +276,12 @@ export class ReservationService {
   async getReservationById(reservationId: string): Promise<ReservationRequest | undefined> {
     return this.reservations.get(reservationId);
   }
+
+  /**
+   * دریافت کلیه رزروها (جهت آمار و داشبورد مدیریت)
+   */
+  async getAllReservations(): Promise<ReservationRequest[]> {
+    return Array.from(this.reservations.values());
+  }
 }
 

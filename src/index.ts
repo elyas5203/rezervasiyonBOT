@@ -3,12 +3,16 @@ import { TelegramBotWorker } from "./channels/telegram-worker";
 import { AdminAuthService, AdminManagementService } from "./admin/admin-service";
 import { IdentityService } from "./core/identity/identity-service";
 import { InventoryService } from "./core/inventory/inventory-service";
+import { ReservationService } from "./core/reservation/reservation-service";
+import { CapacityService } from "./core/capacity/capacity-service";
 
 export interface AppServerConfig {
   port?: number;
   adminSecret?: string;
   travelerBotToken?: string;
   hostBotToken?: string;
+  adminBotToken?: string;
+  adminPasskey?: string;
   autoStartWorkers?: boolean;
 }
 
@@ -18,15 +22,33 @@ export function createAppServer(config: AppServerConfig = {}) {
   const telegramAdapter = new TelegramAdapter(deduplicator);
   const baleAdapter = new BaleAdapter(deduplicator);
   const adminAuth = new AdminAuthService(config.adminSecret ?? process.env.ADMIN_WEBVIEW_SECRET ?? "default_dev_secret");
-  const adminMgmt = new AdminManagementService();
   const identityService = new IdentityService();
   const inventoryService = new InventoryService();
+  const capacityService = new CapacityService();
+  const reservationService = new ReservationService(capacityService);
+  const adminMgmt = new AdminManagementService(adminAuth, inventoryService, reservationService);
 
   const travelerToken = config.travelerBotToken ?? process.env.TELEGRAM_TRAVELER_BOT_TOKEN;
   const hostToken = config.hostBotToken ?? process.env.TELEGRAM_HOST_BOT_TOKEN;
+  const adminToken = config.adminBotToken ?? process.env.TELEGRAM_ADMIN_BOT_TOKEN;
+  const adminPasskey = config.adminPasskey ?? process.env.ADMIN_SECRET_KEY ?? "admin110";
 
   let travelerWorker: TelegramBotWorker | null = null;
   let hostWorker: TelegramBotWorker | null = null;
+  let adminWorker: TelegramBotWorker | null = null;
+
+  if (adminToken && !adminToken.includes("mock")) {
+    adminWorker = new TelegramBotWorker({
+      token: adminToken,
+      role: "ADMIN",
+      adapter: telegramAdapter,
+      identityService,
+      inventoryService,
+      reservationService,
+      adminAuthService: adminAuth,
+      adminPasskey,
+    });
+  }
 
   if (travelerToken && !travelerToken.includes("mock")) {
     travelerWorker = new TelegramBotWorker({
@@ -35,6 +57,7 @@ export function createAppServer(config: AppServerConfig = {}) {
       adapter: telegramAdapter,
       identityService,
       inventoryService,
+      reservationService,
     });
   }
 
@@ -45,7 +68,12 @@ export function createAppServer(config: AppServerConfig = {}) {
       adapter: telegramAdapter,
       identityService,
       inventoryService,
+      reservationService,
     });
+  }
+
+  if (hostWorker && adminWorker) {
+    hostWorker.setPeerAdminWorker(adminWorker);
   }
 
   const startWorkers = async () => {
@@ -55,11 +83,15 @@ export function createAppServer(config: AppServerConfig = {}) {
     if (hostWorker) {
       await hostWorker.start();
     }
+    if (adminWorker) {
+      await adminWorker.start();
+    }
   };
 
   const stopWorkers = () => {
     if (travelerWorker) travelerWorker.stop();
     if (hostWorker) hostWorker.stop();
+    if (adminWorker) adminWorker.stop();
   };
 
   if (config.autoStartWorkers) {
@@ -130,6 +162,7 @@ export function createAppServer(config: AppServerConfig = {}) {
     adminMgmt,
     travelerWorker,
     hostWorker,
+    adminWorker,
   };
 }
 
