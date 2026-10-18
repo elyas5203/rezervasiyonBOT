@@ -61,6 +61,7 @@
 | تخصیص پورت‌های سرور و همگام‌سازی VPS | docs/ai/masters/MASTER_26_SAFE_VPS_SYNC_AND_PORT_ALLOCATION.md#L1-L90 — «تخصیص پورت‌های ۳۰۸۰ و ۳۰۸۱، همگام‌سازی مخزن و آزمون سلامت بات‌ها» |
 | استقرار زنده ربات‌های تلگرام زائر و موکب‌دار | docs/ai/masters/MASTER_27_LIVE_TELEGRAM_BOTS_DEPLOYMENT.md#L1-L96 — «راه‌اندازی ورکر پولینگ تلگرام، سلامت سرور و پاسخگویی زنده» |
 | ربات تلگرام ادمین و رمز عبور | docs/ai/masters/MASTER_28_ADMIN_TELEGRAM_BOT.md#L1-L85 — «احراز هویت admin110، کارتابل موکب‌ها، گزارش آماری و پخش اعلانات» |
+| پاکسازی پیام‌ها و ویرایش درجا (UX ختم‌ساز) | docs/ai/masters/MASTER_29_IN_PLACE_UX_AND_MESSAGE_CLEANUP.md#L1-L85 — «حذف پیام کاربر، editMessageText درجا، جلوگیری از تلنبار پیام» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
@@ -87,6 +88,7 @@
 | اولین ورود و زمان گرفتن شماره | docs/ai/DECISIONS.md#L299-L305 — «DEC-0043» |
 | اجازه شروع محلی مرحله‌ای | docs/ai/DECISIONS.md#L306-L312 — «DEC-0044» |
 | پورت سرور، استقرار زنده و بات ادمین | docs/ai/DECISIONS.md#L313-L335 — «DEC-0045 تا DEC-0047» |
+| تجربه کاربری درجا و پاکسازی پیام (ختم‌ساز) | docs/ai/DECISIONS.md#L336-L345 — «DEC-0048» |
 | پرسش‌های باز | docs/ai/BACKLOG.md#L6-L24 — «OPEN-01 تا OPEN-15» |
 | وضعیت فعلی و امضا | docs/ai/PROJECT_STATE.md#L1-L33 — «Current state / روش شروع شیفت» |
 | تاریخچه | docs/ai/CHANGELOG.md#L1-L92 — «مخزن واقعی، تصمیم‌های تازه و پایه‌ریزی UMAC-P» |

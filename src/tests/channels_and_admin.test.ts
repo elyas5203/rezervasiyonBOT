@@ -500,4 +500,55 @@ describe('MASTER-22 — آزمون‌های درگاه‌های پیام‌رس�
     const updated = await inventoryService.getPlaceById(mokab.id);
     expect(updated?.status).toBe('APPROVED');
   });
+
+  test('BOT-08: پاکسازی خودکار پیام تایپی کاربر (deleteMessage) پس از دریافت و پردازش (DEC-0048)', async () => {
+    const travelerWorker = new TelegramBotWorker({
+      token: 'mock_traveler_token',
+      role: 'TRAVELER',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let deleteCalled = false;
+    (travelerWorker as any).deleteMessage = async (chatId: string, messageId: number | string) => {
+      deleteCalled = true;
+      return true;
+    };
+
+    // کاربر یک پیام تایپ می‌کند
+    await (travelerWorker as any).handleUpdate({
+      update_id: 9010,
+      message: { message_id: 7788, chat: { id: 12345 }, text: '/start' },
+    });
+
+    expect(deleteCalled).toBe(true);
+  });
+
+  test('BOT-09: ویرایش درجا پیام روی همان message_id در کلیک‌های شیشه‌ای بدون ارسال پیام تکراری (DEC-0048)', async () => {
+    const travelerWorker = new TelegramBotWorker({
+      token: 'mock_traveler_token',
+      role: 'TRAVELER',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let editedMessageId: number | string | undefined;
+    (travelerWorker as any).editMessageText = async (params: any) => {
+      editedMessageId = params.messageId;
+      return true;
+    };
+
+    // کاربر روی دکمه شیشه‌ای کلیک می‌کند
+    await (travelerWorker as any).handleUpdate({
+      update_id: 9011,
+      callback_query: {
+        id: 'cb_search',
+        message: { chat: { id: 12345 }, message_id: 9988 },
+        data: 'SEARCH_SPACES',
+      },
+    });
+
+    // باید دقیقا همان پیام قبلی ویرایش شود
+    expect(editedMessageId).toBe(9988);
+  });
 });
