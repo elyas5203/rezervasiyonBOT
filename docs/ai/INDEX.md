@@ -49,6 +49,7 @@
 | انتخاب فناوری و طرح داده | docs/ai/masters/MASTER_14_TECH_STACK_AND_DATA_FOUNDATION.md#L1-L173 — «فناوری، مرزها و طرح داده» |
 | طرح تفصیلی اسکیما و مایگریشن | docs/ai/masters/MASTER_15_DATABASE_SCHEMA_AND_MIGRATIONS.md#L1-L190 — «اسکیما، روابط و آزمون‌ها» |
 | هویت و پیوند حساب پیام‌رسان‌ها | docs/ai/masters/MASTER_16_IDENTITY_AND_ACCOUNT_LINKING.md#L1-L122 — «هویت، کد ۲۴ ساعته و پیوند» |
+| ثبت موکب، سالن و اتاق‌ها | docs/ai/masters/MASTER_17_HOST_ONBOARDING_AND_INVENTORY.md#L1-L120 — «ثبت موکب، فضاها و تأیید ادمین» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
