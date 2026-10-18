@@ -266,7 +266,7 @@ export class CapacityService {
   }
 
   /**
-   * آزادسازی هولد موقت (در رد درخواست، انقضا یا انصراف)
+   * آزادسازی هولد موقت (در رد درخواست، انقضا، لغو یا عدم حضور)
    */
   async releaseHold(holdId: string, reason?: string): Promise<void> {
     const hold = this.holds.get(holdId);
@@ -275,6 +275,14 @@ export class CapacityService {
     }
     hold.status = 'RELEASED';
     this.holds.set(holdId, hold);
+
+    // در صورتی که هولد قبلاً قطعی شده بود، رکوردهای رزرو قطعی را نیز فوراً آزاد کن
+    if (hold.reservationId) {
+      for (const night of hold.stayNights) {
+        const bookingKey = `${hold.spaceId}-${night}-${hold.reservationId}`;
+        this.confirmedBookings.delete(bookingKey);
+      }
+    }
   }
 
   /**
