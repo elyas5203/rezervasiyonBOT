@@ -152,3 +152,31 @@ export interface ReceiptRecord {
   verifiedAt?: Date | null;
   rejectionReason?: string | null;
 }
+
+/** قوانین فعالیت و اقامت موکب (DEC-0009) */
+export interface PlaceOperatingRules {
+  placeId: string;
+  startDate?: string | null; // YYYY-MM-DD
+  endDate?: string | null;   // YYYY-MM-DD
+  maxStayNights: number;     // سقف مجاز اقامت
+  checkInHour: number;       // ساعت مجاز ورود (مثلاً ۱۴)
+  checkOutHour: number;      // ساعت تخلیه و خروج (مثلاً ۱۲)
+}
+
+/** وضعیت نگه‌داشت موقت ظرفیت (DEC-0025, DEC-0035) */
+export type CapacityHoldStatus = 'ACTIVE' | 'RELEASED' | 'COMMITTED';
+
+/** رکورد نگه‌داشت موقت ظرفیت */
+export interface CapacityHold {
+  id: string;
+  placeId: string;
+  spaceId: string;
+  reservationId?: string | null;
+  stayNights: string[]; // آرایه شب‌های اقامت YYYY-MM-DD
+  personCount: number;  // برای سالن: تعداد نفرات؛ برای اتاق: ۱ اتاق (یا ظرفیت اسمی اتاق)
+  genderGroup: GenderGroup;
+  status: CapacityHoldStatus;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
