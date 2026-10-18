@@ -832,4 +832,288 @@ describe('MASTER-22 — آزمون‌های درگاه‌های پیام‌رس�
     expect(travelerReply).toContain('لیست رزروهای شما');
     expect(travelerReply).toContain('موکب انصار الحسین علیه‌السلام');
   });
+
+  // ----------------------------------------------------
+  // ۴. آزمون‌های انعطاف‌پذیری و ورودی دوگانه متنی/دکمه‌ای (MASTER-31 / DEC-0050)
+  // ----------------------------------------------------
+  test('FLEX-01: شروع ثبت موکب با متن و مهار شهرهای ممنوعه عربستان (DEC-0002, DEC-0050)', async () => {
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_flex',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let botResponse = '';
+    (hostWorker as any).editOrSendMessage = async (params: any) => {
+      botResponse = params.text;
+    };
+
+    const hostChatId = 'host-chat-flex-1';
+
+    // ۱. ارسال پیام متنی "ثبت موکب" به جای کلیک دکمه
+    await (hostWorker as any).handleUpdate({
+      update_id: 20001,
+      message: {
+        message_id: 1,
+        chat: { id: hostChatId },
+        from: { id: 101 },
+        text: 'سلام خسته نباشید، می‌خواهم ثبت موکب انجام دهم',
+      },
+    });
+    expect(botResponse).toContain('گام ۱ از ۷');
+
+    // ۲. ارسال نام شهر ممنوعه عربستان (مکه مکرمه) -> باید رد شود (DEC-0002)
+    await (hostWorker as any).handleUpdate({
+      update_id: 20002,
+      message: {
+        message_id: 2,
+        chat: { id: hostChatId },
+        from: { id: 101 },
+        text: 'مکه مکرمه',
+      },
+    });
+    expect(botResponse).toContain('محدودیت سامانه (DEC-0002)');
+    expect(botResponse).toContain('عربستان');
+
+    // ۳. ارسال نام شهر زیارتی دلخواه (سامرا) -> باید پذیرفته شده و به گام ۲ برود
+    await (hostWorker as any).handleUpdate({
+      update_id: 20003,
+      message: {
+        message_id: 3,
+        chat: { id: hostChatId },
+        from: { id: 101 },
+        text: 'سامرا',
+      },
+    });
+    expect(botResponse).toContain('گام ۲ از ۷');
+    expect(botResponse).toContain('سامرا');
+  });
+
+  test('FLEX-02: تعیین ظرفیت سالن‌های عمومی با رقم دلخواه تایپی (۱۵۰ نفر) (DEC-0050)', async () => {
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_flex',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let botResponse = '';
+    (hostWorker as any).editOrSendMessage = async (params: any) => {
+      botResponse = params.text;
+    };
+
+    const hostChatId = 'host-chat-flex-2';
+
+    // شروع ویزارد و ثبت گام‌های اولیه
+    await (hostWorker as any).handleUpdate({
+      update_id: 20010,
+      callback_query: { id: 'cb1', from: { id: 102 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'REGISTER_HOST' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20011,
+      callback_query: { id: 'cb2', from: { id: 102 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_CITY_نجف اشرف' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20012,
+      message: { message_id: 2, chat: { id: hostChatId }, from: { id: 102 }, text: 'موکب امیرالمؤمنین' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20013,
+      message: { message_id: 3, chat: { id: hostChatId }, from: { id: 102 }, text: 'علی حسینی 09123333333' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20014,
+      message: { message_id: 4, chat: { id: hostChatId }, from: { id: 102 }, text: 'میدان ثورة العشرین' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20015,
+      callback_query: { id: 'cb3', from: { id: 102 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_SUPPLY_PUBLIC' },
+    });
+    expect(botResponse).toContain('تعیین ظرفیت سالن‌های عمومی');
+
+    // تایپ رقم دلخواه با ارقام فارسی و پسوند نفر
+    await (hostWorker as any).handleUpdate({
+      update_id: 20016,
+      message: { message_id: 5, chat: { id: hostChatId }, from: { id: 102 }, text: '۱۵۰ نفر' },
+    });
+    expect(botResponse).toContain('گام ۶ از ۷ - مدل مالی');
+
+    const wiz = (hostWorker as any).hostWizards.get(hostChatId);
+    expect(wiz.data.hallCapacity).toBe(150);
+  });
+
+  test('FLEX-03: تعیین تعداد و ظرفیت اتاق‌های دربست با عبارت ترکیبی (۳ اتاق ۵ نفره) (DEC-0050)', async () => {
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_flex',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let botResponse = '';
+    (hostWorker as any).editOrSendMessage = async (params: any) => {
+      botResponse = params.text;
+    };
+
+    const hostChatId = 'host-chat-flex-3';
+
+    await (hostWorker as any).handleUpdate({
+      update_id: 20020,
+      callback_query: { id: 'cb1', from: { id: 103 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'REGISTER_HOST' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20021,
+      callback_query: { id: 'cb2', from: { id: 103 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_CITY_مشهد مقدس' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20022,
+      message: { message_id: 2, chat: { id: hostChatId }, from: { id: 103 }, text: 'حسینیه امام رضا' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20023,
+      message: { message_id: 3, chat: { id: hostChatId }, from: { id: 103 }, text: 'رضا مشهدی 09151111111' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20024,
+      message: { message_id: 4, chat: { id: hostChatId }, from: { id: 103 }, text: 'خیابان طبرسی' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20025,
+      callback_query: { id: 'cb3', from: { id: 103 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_SUPPLY_PRIVATE' },
+    });
+
+    // تایپ عبارت ترکیبی اتاق‌ها: "۳ اتاق ۵ نفره"
+    await (hostWorker as any).handleUpdate({
+      update_id: 20026,
+      message: { message_id: 5, chat: { id: hostChatId }, from: { id: 103 }, text: '۳ اتاق ۵ نفره' },
+    });
+    expect(botResponse).toContain('گام ۶ از ۷ - مدل مالی');
+
+    const wiz = (hostWorker as any).hostWizards.get(hostChatId);
+    expect(wiz.data.roomCount).toBe(3);
+    expect(wiz.data.roomCapacity).toBe(5);
+  });
+
+  test('FLEX-04: تعیین مبلغ سفارشی هزینه اقامت و ثبت نهایی موکب (DEC-0050)', async () => {
+    const hostWorker = new TelegramBotWorker({
+      token: 'mock_host_flex',
+      role: 'HOST',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let botResponse = '';
+    (hostWorker as any).editOrSendMessage = async (params: any) => {
+      botResponse = params.text;
+    };
+
+    const hostChatId = 'host-chat-flex-4';
+
+    // طی گام‌ها تا گام مدل مالی
+    await (hostWorker as any).handleUpdate({
+      update_id: 20030,
+      callback_query: { id: 'cb1', from: { id: 104 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'REGISTER_HOST' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20031,
+      callback_query: { id: 'cb2', from: { id: 104 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_CITY_قم مقدسه' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20032,
+      message: { message_id: 2, chat: { id: hostChatId }, from: { id: 104 }, text: 'زائرسرای حضرت معصومه' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20033,
+      message: { message_id: 3, chat: { id: hostChatId }, from: { id: 104 }, text: 'مهدی قمی 09125555555' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20034,
+      message: { message_id: 4, chat: { id: hostChatId }, from: { id: 104 }, text: 'چهارمردان' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20035,
+      callback_query: { id: 'cb3', from: { id: 104 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_SUPPLY_PUBLIC' },
+    });
+    await (hostWorker as any).handleUpdate({
+      update_id: 20036,
+      callback_query: { id: 'cb4', from: { id: 104 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_CAP_50' },
+    });
+    expect(botResponse).toContain('گام ۶ از ۷ - مدل مالی');
+
+    // کلیک روی تعیین هزینه دلخواه و سپس تایپ ۷۰ هزار تومان
+    await (hostWorker as any).handleUpdate({
+      update_id: 20037,
+      callback_query: { id: 'cb5', from: { id: 104 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_FIN_CHOOSE_FEE' },
+    });
+    expect(botResponse).toContain('تعیین مبلغ هزینه اقامت');
+
+    // تایپ ۷۰,۰۰۰ تومان
+    await (hostWorker as any).handleUpdate({
+      update_id: 20038,
+      message: { message_id: 6, chat: { id: hostChatId }, from: { id: 104 }, text: '۷۰ هزار تومان' },
+    });
+    expect(botResponse).toContain('گام ۷ از ۷ - شیوه تأیید');
+
+    // انتخاب تأیید فوری
+    await (hostWorker as any).handleUpdate({
+      update_id: 20039,
+      callback_query: { id: 'cb6', from: { id: 104 }, message: { chat: { id: hostChatId }, message_id: 1 }, data: 'HOST_APP_INSTANT' },
+    });
+    expect(botResponse).toContain('پیش‌نمایش پرونده موکب');
+    expect(botResponse).toContain('۷۰٬۰۰۰');
+
+    // تایید و ثبت نهایی با ارسال پیام متنی "تایید"
+    await (hostWorker as any).handleUpdate({
+      update_id: 20040,
+      message: { message_id: 7, chat: { id: hostChatId }, from: { id: 104 }, text: 'تایید' },
+    });
+    expect(botResponse).toContain('موکب شما با موفقیت ثبت گردید');
+
+    // راستی‌آزمایی در دیتابیس
+    const places = await inventoryService.getAllPlaces();
+    const qomPlace = places.find(p => p.title === 'زائرسرای حضرت معصومه');
+    expect(qomPlace).toBeDefined();
+    expect(qomPlace?.financialModel).toBe('FIXED_FEE');
+    expect(qomPlace?.feeAmountToman).toBe(70000);
+  });
+
+  test('FLEX-05: ورودی دوگانه زائر با ارسال پیام متنی برای جست‌وجو و پیگیری (DEC-0050)', async () => {
+    const travelerWorker = new TelegramBotWorker({
+      token: 'mock_traveler_flex',
+      role: 'TRAVELER',
+      adapter: telegramAdapter,
+      inventoryService,
+    });
+
+    let travelerReply = '';
+    (travelerWorker as any).editOrSendMessage = async (params: any) => {
+      travelerReply = params.text;
+    };
+
+    // زائر پیام متنی "کربلا" ارسال می‌کند
+    await (travelerWorker as any).handleUpdate({
+      update_id: 20050,
+      message: {
+        message_id: 1,
+        chat: { id: 'traveler-flex-1' },
+        from: { id: 999 },
+        text: 'سلام، موکب‌های کربلا را می‌خواهم ببینم',
+      },
+    });
+    expect(travelerReply).toContain('نتایج جست‌وجو در کربلای معلی');
+
+    // زائر پیام متنی "پیگیری رزروهای من" ارسال می‌کند
+    await (travelerWorker as any).handleUpdate({
+      update_id: 20051,
+      message: {
+        message_id: 2,
+        chat: { id: 'traveler-flex-1' },
+        from: { id: 999 },
+        text: 'پیگیری رزروهای من',
+      },
+    });
+    expect(travelerReply).toContain('پیگیری رزروها');
+  });
 });
+

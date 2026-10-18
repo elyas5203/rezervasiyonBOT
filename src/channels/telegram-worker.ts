@@ -15,8 +15,52 @@ export interface BotWorkerConfig {
   adminPasskey?: string;
 }
 
+export function normalizePersianDigits(input: string): string {
+  if (!input) return "";
+  const pDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  const aDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  let res = String(input);
+  for (let i = 0; i < 10; i++) {
+    res = res.replaceAll(pDigits[i], String(i));
+    res = res.replaceAll(aDigits[i], String(i));
+  }
+  return res.replace(/[,،]/g, "").trim();
+}
+
+export function parseRoomSpecs(input: string): { count: number; capacity: number } | null {
+  const norm = normalizePersianDigits(input);
+  // Match "3*5", "3x5", "3 در 5", "3 تا 5", "3 اتاق 5 نفره", "3 اتاق 5"
+  const m = norm.match(/(\d+)\s*(?:[x*×X]|در|تا|اتاق(?:های)?)\s*(\d+)/i);
+  if (m) {
+    const c = parseInt(m[1], 10);
+    const cap = parseInt(m[2], 10);
+    if (c > 0 && cap > 0) return { count: c, capacity: cap };
+  }
+  // Match "5 عدد اتاق 4 نفره"
+  const m2 = norm.match(/(\d+)\s*(?:عدد|دستگاه|مورد)?\s*اتاق\s*(\d+)/i);
+  if (m2) {
+    const c = parseInt(m2[1], 10);
+    const cap = parseInt(m2[2], 10);
+    if (c > 0 && cap > 0) return { count: c, capacity: cap };
+  }
+  return null;
+}
+
+export function parseTomanValue(input: string): number {
+  const norm = normalizePersianDigits(input);
+  const match = norm.match(/\d+/);
+  if (!match) return 0;
+  let val = parseInt(match[0], 10);
+  if (norm.includes("میلیون") && val < 1000000) {
+    val *= 1000000;
+  } else if (norm.includes("هزار") && val < 1000) {
+    val *= 1000;
+  }
+  return val;
+}
+
 export interface HostWizardSession {
-  step: "CITY" | "TITLE" | "CONTACT" | "ADDRESS" | "SUPPLY_TYPE" | "CAPACITY" | "FINANCIAL" | "APPROVAL" | "CONFIRM";
+  step: "CITY" | "TITLE" | "CONTACT" | "ADDRESS" | "SUPPLY_TYPE" | "CAPACITY" | "FINANCIAL" | "FINANCIAL_AMOUNT" | "APPROVAL" | "CONFIRM";
   data: {
     city?: string;
     title?: string;
@@ -509,6 +553,37 @@ export class TelegramBotWorker {
       return;
     }
 
+    // پشتیبانی از ورودی متنی برای زائر (Dual-Input)
+    if (text && !callback) {
+      if (text.includes("کربلا")) {
+        return this.handleTravelerMessage(chatId, "", "TRAVELER_CITY_کربلای معلی", fromUserId, messageId);
+      }
+      if (text.includes("نجف")) {
+        return this.handleTravelerMessage(chatId, "", "TRAVELER_CITY_نجف اشرف", fromUserId, messageId);
+      }
+      if (text.includes("مشهد")) {
+        return this.handleTravelerMessage(chatId, "", "TRAVELER_CITY_مشهد مقدس", fromUserId, messageId);
+      }
+      if (text.includes("قم")) {
+        return this.handleTravelerMessage(chatId, "", "TRAVELER_CITY_قم مقدسه", fromUserId, messageId);
+      }
+      if (text.includes("همه") || text.includes("تمام") || text.includes("لیست")) {
+        return this.handleTravelerMessage(chatId, "", "TRAVELER_CITY_ALL", fromUserId, messageId);
+      }
+      if (text.includes("رزرو") || text.includes("پیگیری")) {
+        return this.handleTravelerMessage(chatId, "", "MY_RESERVATIONS", fromUserId, messageId);
+      }
+      if (text.includes("جستجو") || text.includes("موکب")) {
+        return this.handleTravelerMessage(chatId, "", "SEARCH_SPACES", fromUserId, messageId);
+      }
+      if (text.includes("قوانین") || text.includes("راهنما")) {
+        return this.handleTravelerMessage(chatId, "", "RULES_INFO", fromUserId, messageId);
+      }
+      if (text.includes("اتصال") || text.includes("بله")) {
+        return this.handleTravelerMessage(chatId, "", "LINK_ACCOUNT", fromUserId, messageId);
+      }
+    }
+
     await this.editOrSendMessage({
       chatId,
       messageId,
@@ -527,12 +602,12 @@ export class TelegramBotWorker {
     const hostId = String(fromUserId || chatId);
 
     // ۱. خروج از ویزارد یا بازگشت به منوی اصلی موکب‌دار
-    if (text === "/start" || callback === "HOST_MENU") {
+    if (text === "/start" || text === "منو" || text === "منوی اصلی" || callback === "HOST_MENU") {
       this.hostWizards.delete(chatId);
       const message = {
         chatId,
         messageId,
-        text: `سلام و احترام خدمت خادم و موکب‌دار گرامی 🏴\nبه <b>سامانه مدیریت و کارتابل موکب‌داران</b> خوش آمدید.\n\nلطفاً یکی از بخش‌های زیر را انتخاب نمایید:`,
+        text: `سلام و احترام خدمت خادم و موکب‌دار گرامی 🏴\nبه <b>سامانه مدیریت و کارتابل موکب‌داران</b> خوش آمدید.\n\nلطفاً یکی از بخش‌های زیر را انتخاب نمایید یا دستور دلخواه را ارسال کنید:`,
         inlineKeyboard: [
           [{ text: "➕ ثبت موکب و ظرفیت جدید", callbackData: "REGISTER_HOST" }],
           [{ text: "📋 کارتابل درخواست‌های رزرو مسافران", callbackData: "PENDING_REQUESTS" }],
@@ -544,13 +619,15 @@ export class TelegramBotWorker {
       return;
     }
 
-    // ۲. شروع ویزارد ثبت موکب (گام ۱: انتخاب شهر)
-    if (callback === "REGISTER_HOST") {
+    const wiz = this.hostWizards.get(chatId);
+
+    // ۲. شروع ویزارد ثبت موکب (کلیک دکمه یا ارسال متن ثبت)
+    if (callback === "REGISTER_HOST" || (!wiz && (text.includes("ثبت") || text === "/register" || text === "/new"))) {
       this.hostWizards.set(chatId, { step: "CITY", data: {} });
       const message = {
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب و فضاهای اسکان (گام ۱ از ۷):</b>\n\nخادم گرامی، لطفاً شهر محل استقرار موکب خود را انتخاب فرمایید:`,
+        text: `<b>➕ ثبت موکب و فضاهای اسکان (گام ۱ از ۷):</b>\n\nخادم گرامی، لطفاً شهر محل استقرار موکب خود را انتخاب فرمایید یا <b>نام شهر را مستقیماً تایپ فرمایید</b>:\n<i>(مثال: سامرا، کاظمین، شیراز، قم و...)</i>`,
         inlineKeyboard: [
           [
             { text: "کربلای معلی 🇮🇶", callbackData: "HOST_CITY_کربلای معلی" },
@@ -567,13 +644,46 @@ export class TelegramBotWorker {
       return;
     }
 
-    // گام ۱: دریافت شهر -> گام ۲: درخواست نام موکب
-    if (callback && callback.startsWith("HOST_CITY_")) {
-      const city = callback.replace("HOST_CITY_", "");
-      const wiz = this.hostWizards.get(chatId) || { step: "CITY", data: {} };
-      wiz.data.city = city;
-      wiz.step = "TITLE";
-      this.hostWizards.set(chatId, wiz);
+    // هدایت دستورات متنی منوی اصلی در صورتی که کاربری خارج از ویزارد باشد
+    if (!wiz) {
+      if (text.includes("کارتابل") || text.includes("درخواست")) {
+        return this.handleHostMessage(chatId, "", "PENDING_REQUESTS", fromUserId, messageId);
+      }
+      if (text.includes("وضعیت") || text.includes("اتاق") || text.includes("سالن") || text.includes("ظرفیت")) {
+        return this.handleHostMessage(chatId, "", "ROOMS_STATUS", fromUserId, messageId);
+      }
+      if (text.includes("فیش") || text.includes("واریز")) {
+        return this.handleHostMessage(chatId, "", "RECEIPTS_INBOX", fromUserId, messageId);
+      }
+    }
+
+    // گام ۱: دریافت شهر -> گام ۲: درخواست نام موکب (دکمه یا تایپ آزاد شهر)
+    if ((callback && callback.startsWith("HOST_CITY_")) || (wiz && wiz.step === "CITY" && text.length > 0)) {
+      const city = callback ? callback.replace("HOST_CITY_", "") : text.trim();
+      if (city.includes("مکه") || city.includes("مدینه")) {
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `⚠️ <b>محدودیت سامانه (DEC-0002):</b>\n\nطبق ضوابط، در حال حاضر ثبت اقامتگاه در شهرهای عربستان (مکه و مدینه) در سامانه پشتیبانی نمی‌شود.\nلطفاً شهر زیارتی دیگری (مانند کربلا، نجف، مشهد، سامرا، کاظمین، قم و...) را انتخاب یا تایپ فرمایید:`,
+          inlineKeyboard: [
+            [
+              { text: "کربلای معلی 🇮🇶", callbackData: "HOST_CITY_کربلای معلی" },
+              { text: "نجف اشرف 🇮🇶", callbackData: "HOST_CITY_نجف اشرف" },
+            ],
+            [
+              { text: "مشهد مقدس 🇮🇷", callbackData: "HOST_CITY_مشهد مقدس" },
+              { text: "قم مقدسه 🇮🇷", callbackData: "HOST_CITY_قم مقدسه" },
+            ],
+            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+
+      const currentWiz = wiz || { step: "CITY", data: {} };
+      currentWiz.data.city = city;
+      currentWiz.step = "TITLE";
+      this.hostWizards.set(chatId, currentWiz);
 
       await this.editOrSendMessage({
         chatId,
@@ -585,7 +695,6 @@ export class TelegramBotWorker {
     }
 
     // دریافت نام موکب (متن) -> گام ۳: درخواست نام مسئول و شماره تماس
-    const wiz = this.hostWizards.get(chatId);
     if (wiz && wiz.step === "TITLE" && text.length > 0) {
       wiz.data.title = text.trim();
       wiz.step = "CONTACT";
@@ -636,10 +745,22 @@ export class TelegramBotWorker {
       return;
     }
 
-    // گام ۵: انتخاب نوع فضا -> درخواست تعیین ظرفیت
-    if (callback && callback.startsWith("HOST_SUPPLY_")) {
-      const supply = callback.replace("HOST_SUPPLY_", "") as "PUBLIC" | "PRIVATE" | "BOTH";
-      const currentWiz = this.hostWizards.get(chatId);
+    // گام ۵: انتخاب نوع فضا (دکمه یا تایپ) -> درخواست تعیین ظرفیت
+    if ((callback && callback.startsWith("HOST_SUPPLY_")) || (wiz && wiz.step === "SUPPLY_TYPE" && text.length > 0)) {
+      let supply: "PUBLIC" | "PRIVATE" | "BOTH" = "PUBLIC";
+      if (callback && callback.startsWith("HOST_SUPPLY_")) {
+        supply = callback.replace("HOST_SUPPLY_", "") as "PUBLIC" | "PRIVATE" | "BOTH";
+      } else if (text) {
+        if (text.includes("اتاق") || text.includes("دربست") || text.includes("خانوادگی")) {
+          supply = "PRIVATE";
+        } else if (text.includes("ترکیب") || text.includes("هر دو") || text.includes("هم")) {
+          supply = "BOTH";
+        } else {
+          supply = "PUBLIC";
+        }
+      }
+
+      const currentWiz = wiz || this.hostWizards.get(chatId);
       if (currentWiz) {
         currentWiz.data.supplyType = supply;
         currentWiz.step = "CAPACITY";
@@ -649,7 +770,7 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ تعیین ظرفیت سالن‌های عمومی:</b>\n\nظرفیت کل پذیرش در هر شب را انتخاب نمایید (به تساوی میان سالن برادران و خواهران تقسیم می‌شود):`,
+            text: `<b>➕ تعیین ظرفیت سالن‌های عمومی:</b>\n\nظرفیت کل پذیرش در هر شب را انتخاب نمایید یا <b>عدد ظرفیت دلخواه را بنویسید</b> (مثال: ۱۵۰ نفر):\n<i>(نصف ظرفیت به برادران و نصف به خواهران تخصیص می‌یابد)</i>`,
             inlineKeyboard: [
               [
                 { text: "۵۰ نفر (۲۵ آقا / ۲۵ خانم)", callbackData: "HOST_CAP_50" },
@@ -667,7 +788,7 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ تعیین تعداد و ظرفیت اتاق‌های دربست:</b>\n\nتعداد اتاق‌ها و ظرفیت هر اتاق خانوادگی را انتخاب فرمایید:`,
+            text: `<b>➕ تعیین تعداد و ظرفیت اتاق‌های دربست:</b>\n\nتعداد اتاق‌ها و ظرفیت هر اتاق خانوادگی را انتخاب فرمایید یا <b>ترکیب دلخواه خود را بنویسید</b>:\n<i>(مثال: ۵ اتاق ۴ نفره یا ۳*۵ یا ۴ در ۶)</i>`,
             inlineKeyboard: [
               [
                 { text: "۵ اتاق ۴ نفره (۲۰ نفر)", callbackData: "HOST_ROOMS_5_4" },
@@ -685,7 +806,7 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ تعیین ظرفیت سالن‌ها و اتاق‌ها:</b>\n\nترکیب ظرفیت مورد نظر خود را انتخاب نمایید:`,
+            text: `<b>➕ تعیین ظرفیت سالن‌ها و اتاق‌ها:</b>\n\nترکیب ظرفیت مورد نظر خود را انتخاب نمایید یا <b>بنویسید</b> (مثال: ۱۰۰ سالن + ۵ اتاق ۴ نفره):`,
             inlineKeyboard: [
               [{ text: "۱۰۰ نفر سالن + ۵ اتاق ۴ نفره", callbackData: "HOST_BOTH_100_5_4" }],
               [{ text: "۲۰۰ نفر سالن + ۱۰ اتاق ۴ نفره", callbackData: "HOST_BOTH_200_10_4" }],
@@ -697,21 +818,73 @@ export class TelegramBotWorker {
       }
     }
 
-    // دریافت دکمه ظرفیت -> گام ۶: مدل مالی
-    if (callback && (callback.startsWith("HOST_CAP_") || callback.startsWith("HOST_ROOMS_") || callback.startsWith("HOST_BOTH_"))) {
-      const currentWiz = this.hostWizards.get(chatId);
+    // دریافت ظرفیت (دکمه یا تایپ آزاد) -> گام ۶: مدل مالی
+    if (
+      (callback && (callback.startsWith("HOST_CAP_") || callback.startsWith("HOST_ROOMS_") || callback.startsWith("HOST_BOTH_"))) ||
+      (wiz && wiz.step === "CAPACITY" && text.length > 0)
+    ) {
+      const currentWiz = wiz || this.hostWizards.get(chatId);
       if (currentWiz) {
-        if (callback.startsWith("HOST_CAP_")) {
-          currentWiz.data.hallCapacity = Number(callback.replace("HOST_CAP_", ""));
-        } else if (callback.startsWith("HOST_ROOMS_")) {
-          const parts = callback.replace("HOST_ROOMS_", "").split("_");
-          currentWiz.data.roomCount = Number(parts[0]);
-          currentWiz.data.roomCapacity = Number(parts[1]);
-        } else if (callback.startsWith("HOST_BOTH_")) {
-          const parts = callback.replace("HOST_BOTH_", "").split("_");
-          currentWiz.data.hallCapacity = Number(parts[0]);
-          currentWiz.data.roomCount = Number(parts[1]);
-          currentWiz.data.roomCapacity = Number(parts[2]);
+        if (callback) {
+          if (callback.startsWith("HOST_CAP_")) {
+            currentWiz.data.hallCapacity = Number(callback.replace("HOST_CAP_", ""));
+          } else if (callback.startsWith("HOST_ROOMS_")) {
+            const parts = callback.replace("HOST_ROOMS_", "").split("_");
+            currentWiz.data.roomCount = Number(parts[0]);
+            currentWiz.data.roomCapacity = Number(parts[1]);
+          } else if (callback.startsWith("HOST_BOTH_")) {
+            const parts = callback.replace("HOST_BOTH_", "").split("_");
+            currentWiz.data.hallCapacity = Number(parts[0]);
+            currentWiz.data.roomCount = Number(parts[1]);
+            currentWiz.data.roomCapacity = Number(parts[2]);
+          }
+        } else if (text) {
+          const supply = currentWiz.data.supplyType || "PUBLIC";
+          if (supply === "PUBLIC") {
+            const norm = normalizePersianDigits(text);
+            const numMatch = norm.match(/\d+/);
+            const val = numMatch ? parseInt(numMatch[0], 10) : 0;
+            if (val > 0) {
+              currentWiz.data.hallCapacity = val;
+            } else {
+              await this.editOrSendMessage({
+                chatId,
+                messageId,
+                text: `⚠️ لطفاً ظرفیت عددی سالن را به صورت یک رقم معتبر وارد فرمایید (مثال: ۱۵۰):`,
+                inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+              });
+              return;
+            }
+          } else if (supply === "PRIVATE") {
+            const rooms = parseRoomSpecs(text);
+            if (rooms) {
+              currentWiz.data.roomCount = rooms.count;
+              currentWiz.data.roomCapacity = rooms.capacity;
+            } else {
+              await this.editOrSendMessage({
+                chatId,
+                messageId,
+                text: `⚠️ لطفاً تعداد و ظرفیت هر اتاق را مشخص فرمایید (مثال: ۵ اتاق ۴ نفره یا ۳*۵):`,
+                inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+              });
+              return;
+            }
+          } else {
+            // BOTH
+            const rooms = parseRoomSpecs(text);
+            if (rooms) {
+              currentWiz.data.roomCount = rooms.count;
+              currentWiz.data.roomCapacity = rooms.capacity;
+              const withoutRooms = text.replace(new RegExp(`(?:${rooms.count}|${rooms.capacity}|اتاق|نفره)`, 'gi'), '');
+              const hallMatch = normalizePersianDigits(withoutRooms).match(/\d+/);
+              currentWiz.data.hallCapacity = hallMatch ? parseInt(hallMatch[0], 10) : 100;
+            } else {
+              const numMatch = normalizePersianDigits(text).match(/\d+/);
+              currentWiz.data.hallCapacity = numMatch ? parseInt(numMatch[0], 10) : 100;
+              currentWiz.data.roomCount = 5;
+              currentWiz.data.roomCapacity = 4;
+            }
+          }
         }
 
         currentWiz.step = "FINANCIAL";
@@ -720,12 +893,18 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `<b>➕ ثبت موکب (گام ۶ از ۷ - مدل مالی و خدمات):</b>\n\nمدل ارائه خدمات اسکان را تعیین فرمایید:`,
+          text: `<b>➕ ثبت موکب (گام ۶ از ۷ - مدل مالی و خدمات):</b>\n\nمدل ارائه خدمات اسکان را تعیین فرمایید یا <b>مبلغ دلخواه را مستقیماً بنویسید</b>:`,
           inlineKeyboard: [
             [{ text: "رایگان و صلواتی 💚", callbackData: "HOST_FIN_FREE" }],
-            [{ text: "هزینه ثابت (شبی ۵۰ هزار تومان) 💰", callbackData: "HOST_FIN_FEE_50000" }],
-            [{ text: "هزینه ثابت (شبی ۱۰۰ هزار تومان) 💰", callbackData: "HOST_FIN_FEE_100000" }],
-            [{ text: "تضمین حسن انجام کار (امانت ۲۰۰ هزار تومان) 🛡", callbackData: "HOST_FIN_DEP_200000" }],
+            [
+              { text: "تعیین هزینه اقامت دلخواه 💰", callbackData: "HOST_FIN_CHOOSE_FEE" },
+              { text: "تعیین ودیعه امانت دلخواه 🛡", callbackData: "HOST_FIN_CHOOSE_DEP" },
+            ],
+            [
+              { text: "شبی ۵۰ هزار تومان 💰", callbackData: "HOST_FIN_FEE_50000" },
+              { text: "شبی ۱۰۰ هزار تومان 💰", callbackData: "HOST_FIN_FEE_100000" },
+            ],
+            [{ text: "تضمین امانت ۲۰۰ هزار تومان 🛡", callbackData: "HOST_FIN_DEP_200000" }],
             [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
           ],
         });
@@ -733,22 +912,120 @@ export class TelegramBotWorker {
       }
     }
 
-    // گام ۶: مدل مالی -> گام ۷: شیوه تأیید
-    if (callback && callback.startsWith("HOST_FIN_")) {
+    // گام ۶: مدل مالی (دکمه‌های انتخاب مستقیم یا هدایت به تایپ مبلغ)
+    if (callback === "HOST_FIN_CHOOSE_FEE") {
       const currentWiz = this.hostWizards.get(chatId);
       if (currentWiz) {
-        if (callback === "HOST_FIN_FREE") {
-          currentWiz.data.financialModel = "FREE";
-          currentWiz.data.feeAmountToman = 0;
-          currentWiz.data.depositAmountToman = 0;
-        } else if (callback.startsWith("HOST_FIN_FEE_")) {
-          currentWiz.data.financialModel = "FIXED_FEE";
-          currentWiz.data.feeAmountToman = Number(callback.replace("HOST_FIN_FEE_", ""));
-          currentWiz.data.depositAmountToman = 0;
-        } else if (callback.startsWith("HOST_FIN_DEP_")) {
-          currentWiz.data.financialModel = "FIXED_DEPOSIT";
-          currentWiz.data.depositAmountToman = Number(callback.replace("HOST_FIN_DEP_", ""));
-          currentWiz.data.feeAmountToman = 0;
+        currentWiz.data.financialModel = "FIXED_FEE";
+        currentWiz.step = "FINANCIAL_AMOUNT";
+        this.hostWizards.set(chatId, currentWiz);
+
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>💰 تعیین مبلغ هزینه اقامت:</b>\n\nلطفاً <b>مبلغ هزینه هر شب به ازای هر زائر</b> را به تومان تایپ نمایید یا یکی از مبالغ زیر را انتخاب کنید:\n<i>(مثال: 70000 یا ۷۰ هزار تومان)</i>`,
+          inlineKeyboard: [
+            [
+              { text: "۳۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_30000" },
+              { text: "۵۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_50000" },
+            ],
+            [
+              { text: "۷۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_70000" },
+              { text: "۱۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_100000" },
+            ],
+            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+    }
+
+    if (callback === "HOST_FIN_CHOOSE_DEP") {
+      const currentWiz = this.hostWizards.get(chatId);
+      if (currentWiz) {
+        currentWiz.data.financialModel = "FIXED_DEPOSIT";
+        currentWiz.step = "FINANCIAL_AMOUNT";
+        this.hostWizards.set(chatId, currentWiz);
+
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>🛡 تعیین مبلغ تضمین حسن انجام کار (امانت):</b>\n\nلطفاً <b>مبلغ تضمین امانت</b> را به تومان تایپ نمایید یا یکی از گزینه‌های زیر را انتخاب فرمایید:\n<i>(مثال: 150000 یا ۱۵۰ هزار تومان)</i>`,
+          inlineKeyboard: [
+            [
+              { text: "۱۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_100000" },
+              { text: "۲۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_200000" },
+            ],
+            [
+              { text: "۳۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_300000" },
+              { text: "۵۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_500000" },
+            ],
+            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+    }
+
+    // گام ۶: مدل مالی -> دکمه‌های سریع یا ورودی متنی
+    if (
+      (callback && callback.startsWith("HOST_FIN_")) ||
+      (wiz && wiz.step === "FINANCIAL" && text.length > 0)
+    ) {
+      const currentWiz = wiz || this.hostWizards.get(chatId);
+      if (currentWiz) {
+        if (callback) {
+          if (callback === "HOST_FIN_FREE") {
+            currentWiz.data.financialModel = "FREE";
+            currentWiz.data.feeAmountToman = 0;
+            currentWiz.data.depositAmountToman = 0;
+          } else if (callback.startsWith("HOST_FIN_FEE_")) {
+            currentWiz.data.financialModel = "FIXED_FEE";
+            currentWiz.data.feeAmountToman = Number(callback.replace("HOST_FIN_FEE_", ""));
+            currentWiz.data.depositAmountToman = 0;
+          } else if (callback.startsWith("HOST_FIN_DEP_")) {
+            currentWiz.data.financialModel = "FIXED_DEPOSIT";
+            currentWiz.data.depositAmountToman = Number(callback.replace("HOST_FIN_DEP_", ""));
+            currentWiz.data.feeAmountToman = 0;
+          }
+        } else if (text) {
+          if (text.includes("رایگان") || text.includes("صلواتی")) {
+            currentWiz.data.financialModel = "FREE";
+            currentWiz.data.feeAmountToman = 0;
+            currentWiz.data.depositAmountToman = 0;
+          } else if (text.includes("تضمین") || text.includes("امانت") || text.includes("ودیعه")) {
+            currentWiz.data.financialModel = "FIXED_DEPOSIT";
+            const val = parseTomanValue(text);
+            if (val > 0) {
+              currentWiz.data.depositAmountToman = val;
+              currentWiz.data.feeAmountToman = 0;
+            } else {
+              currentWiz.step = "FINANCIAL_AMOUNT";
+              this.hostWizards.set(chatId, currentWiz);
+              await this.editOrSendMessage({
+                chatId,
+                messageId,
+                text: `لطفاً مبلغ ودیعه را به تومان وارد نمایید (مثال: ۱۵۰ هزار تومان یا 150000):`,
+                inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+              });
+              return;
+            }
+          } else {
+            const val = parseTomanValue(text);
+            if (val > 0) {
+              currentWiz.data.financialModel = "FIXED_FEE";
+              currentWiz.data.feeAmountToman = val;
+              currentWiz.data.depositAmountToman = 0;
+            } else {
+              await this.editOrSendMessage({
+                chatId,
+                messageId,
+                text: `⚠️ مبلغ واردشده نامعتبر است. لطفاً مبلغ هزینه را به تومان وارد نمایید (مثال: ۷۰ هزار تومان یا 70000):`,
+                inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+              });
+              return;
+            }
+          }
         }
 
         currentWiz.step = "APPROVAL";
@@ -768,11 +1045,67 @@ export class TelegramBotWorker {
       }
     }
 
-    // گام ۷: شیوه تأیید -> پیش‌نمایش نهایی
-    if (callback && callback.startsWith("HOST_APP_")) {
-      const currentWiz = this.hostWizards.get(chatId);
+    // دریافت مبلغ در گام FINANCIAL_AMOUNT (دکمه یا تایپ)
+    if (
+      (callback && callback.startsWith("HOST_AMOUNT_")) ||
+      (wiz && wiz.step === "FINANCIAL_AMOUNT" && text.length > 0)
+    ) {
+      const currentWiz = wiz || this.hostWizards.get(chatId);
       if (currentWiz) {
-        currentWiz.data.approvalMode = callback.replace("HOST_APP_", "") as "INSTANT" | "MANUAL";
+        const val = callback ? Number(callback.replace("HOST_AMOUNT_", "")) : parseTomanValue(text);
+        if (val > 0) {
+          if (currentWiz.data.financialModel === "FIXED_DEPOSIT") {
+            currentWiz.data.depositAmountToman = val;
+            currentWiz.data.feeAmountToman = 0;
+          } else {
+            currentWiz.data.financialModel = "FIXED_FEE";
+            currentWiz.data.feeAmountToman = val;
+            currentWiz.data.depositAmountToman = 0;
+          }
+
+          currentWiz.step = "APPROVAL";
+          this.hostWizards.set(chatId, currentWiz);
+
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ ثبت موکب (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
+            inlineKeyboard: [
+              [{ text: "⚡️ تأیید فوری و خودکار (رزرو قطعی آنی)", callbackData: "HOST_APP_INSTANT" }],
+              [{ text: "⏳ تأیید دستی (با بررسی و پذیرش من)", callbackData: "HOST_APP_MANUAL" }],
+              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        } else {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `⚠️ مبلغ واردشده نامعتبر است. لطفاً مبلغ مورد نظر را به تومان وارد فرمایید (مثال: 70000):`,
+            inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+          });
+          return;
+        }
+      }
+    }
+
+    // گام ۷: شیوه تأیید (دکمه یا متن) -> پیش‌نمایش نهایی
+    if (
+      (callback && callback.startsWith("HOST_APP_")) ||
+      (wiz && wiz.step === "APPROVAL" && text.length > 0)
+    ) {
+      const currentWiz = wiz || this.hostWizards.get(chatId);
+      if (currentWiz) {
+        if (callback && callback.startsWith("HOST_APP_")) {
+          currentWiz.data.approvalMode = callback.replace("HOST_APP_", "") as "INSTANT" | "MANUAL";
+        } else if (text) {
+          if (text.includes("فوری") || text.includes("آنی") || text.includes("خودکار")) {
+            currentWiz.data.approvalMode = "INSTANT";
+          } else {
+            currentWiz.data.approvalMode = "MANUAL";
+          }
+        }
+
         currentWiz.step = "CONFIRM";
         this.hostWizards.set(chatId, currentWiz);
 
@@ -787,11 +1120,27 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `📋 <b>پیش‌نمایش پرونده موکب جهت ثبت:</b>\n\n• <b>نام موکب:</b> ${d.title}\n• <b>شهر زیارتی:</b> ${d.city}\n• <b>مسئول و تماس:</b> ${d.contactName}\n• <b>نشانی:</b> ${d.address}\n• <b>نوع فضا:</b> ${supplyLabel}\n• <b>ظرفیت فضاها:</b> ${combinedCap}\n• <b>مدل مالی:</b> ${finLabel}\n• <b>شیوه تأیید رزرو:</b> ${appLabel}\n\nجهت ثبت قطعی و ارسال به کارتابل ادمین روی دکمه زیر کلیک نمایید:`,
+          text: `📋 <b>پیش‌نمایش پرونده موکب جهت ثبت:</b>\n\n• <b>نام موکب:</b> ${d.title}\n• <b>شهر زیارتی:</b> ${d.city}\n• <b>مسئول و تماس:</b> ${d.contactName}\n• <b>نشانی:</b> ${d.address}\n• <b>نوع فضا:</b> ${supplyLabel}\n• <b>ظرفیت فضاها:</b> ${combinedCap}\n• <b>مدل مالی:</b> ${finLabel}\n• <b>شیوه تأیید رزرو:</b> ${appLabel}\n\nجهت ثبت قطعی و ارسال به کارتابل ادمین روی دکمه زیر کلیک نمایید یا عبارت «تأیید» را ارسال فرمایید:`,
           inlineKeyboard: [
             [{ text: "✅ تأیید نهایی و ثبت موکب", callbackData: "HOST_SUBMIT_PLACE" }],
             [{ text: "❌ انصراف و لغو", callbackData: "HOST_MENU" }],
           ],
+        });
+        return;
+      }
+    }
+
+    // تایید یا انصراف متنی در مرحله پیش‌نمایش نهایی
+    if (wiz && wiz.step === "CONFIRM" && text.length > 0) {
+      if (text.includes("تایید") || text.includes("ثبت") || text.includes("بله") || text.includes("ارسال")) {
+        callback = "HOST_SUBMIT_PLACE";
+      } else if (text.includes("لغو") || text.includes("انصراف") || text.includes("خیر")) {
+        this.hostWizards.delete(chatId);
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `عملیات ثبت موکب لغو شد. به منوی اصلی بازگشتید:`,
+          inlineKeyboard: [[{ text: "🔙 منوی اصلی موکب‌دار", callbackData: "HOST_MENU" }]],
         });
         return;
       }
