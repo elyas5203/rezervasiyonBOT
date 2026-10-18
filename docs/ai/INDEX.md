@@ -57,6 +57,7 @@
 | درگاه‌های پیام‌رسان و وب‌ویو مدیریت | docs/ai/masters/MASTER_22_CHANNELS_AND_ADMIN_WEBVIEW.md#L1-L130 — «تلگرام، بله، عدم تکرار، احراز هویت وب‌ویو، تأیید موکب و ممیزی» |
 | آزمون‌های سرتاسری یکپارچه و پذیرش | docs/ai/masters/MASTER_23_END_TO_END_ACCEPTANCE_TESTING.md#L1-L120 — «سناریوهای سرتاسری E2E، پیوستگی سفر زائر، رقابت کانال‌ها و پذیرش» |
 | کانتینرسازی داکر و شبیه‌سازی محلی | docs/ai/masters/MASTER_24_DOCKER_CONTAINERIZATION_AND_LOCAL_ISOLATION.md#L1-L125 — «داکر، ایمیج سبک، ایزولاسیون محلی و بررسی سلامت» |
+| تحویل فاز اول و ممیزی جامع انطباق | docs/ai/masters/MASTER_25_PHASE_ONE_HANDOVER_AND_AUDIT.md#L1-L120 — «تحویل فاز اول، ممیزی نقش‌ها، ماتریس انطباق DEC و راهنمای اجرا» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
