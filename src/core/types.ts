@@ -125,6 +125,7 @@ export interface ReservationRequest {
   id: string;
   trackingCode: string;
   personId: string;
+  contactPhone: string;
   placeId: string;
   spaceId: string;
   checkInDate: string;  // YYYY-MM-DD
@@ -134,7 +135,9 @@ export interface ReservationRequest {
   childCount: number;
   totalCount: number;
   status: ReservationStatus;
+  holdId?: string | null;
   holdExpiresAt?: Date | null;
+  cancellationRulesSnapshot: string; // قانون لغو در زمان ثبت رزرو فریز می‌شود (DEC-0014)
   isForeignPilgrim: boolean;
   passportImagePath?: string | null;
   passportDeletedAt?: Date | null;

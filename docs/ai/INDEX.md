@@ -51,6 +51,7 @@
 | هویت و پیوند حساب پیام‌رسان‌ها | docs/ai/masters/MASTER_16_IDENTITY_AND_ACCOUNT_LINKING.md#L1-L122 — «هویت، کد ۲۴ ساعته و پیوند» |
 | ثبت موکب، سالن و اتاق‌ها | docs/ai/masters/MASTER_17_HOST_ONBOARDING_AND_INVENTORY.md#L1-L120 — «ثبت موکب، فضاها و تأیید ادمین» |
 | موتور تقویم و کنترل ظرفیت | docs/ai/masters/MASTER_18_CALENDAR_AND_CAPACITY_ENGINE.md#L1-L140 — «تقویم، مدت، ظرفیت و نگه‌داشت ۲۴ ساعته» |
+| چهار مسیر رزرو و چرخه حیات مسافر | docs/ai/masters/MASTER_19_RESERVATION_LIFECYCLE_AND_BOOKING.md#L1-L150 — «چهار مسیر رزرو، گذرنامه خارجی و ماشین وضعیت» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
