@@ -241,9 +241,33 @@ export class ReservationService {
   }
 
   /**
+   * به‌روزرسانی وضعیت رزرو توسط سرویس‌های مجاز (مانند سرویس مالی و تسویه)
+   */
+  async updateReservationStatus(
+    reservationId: string,
+    newStatus: ReservationStatus,
+    newHoldExpiry?: Date | null,
+    now: Date = new Date()
+  ): Promise<ReservationRequest> {
+    const reservation = this.reservations.get(reservationId);
+    if (!reservation) {
+      throw new Error('RESERVATION_NOT_FOUND: رزرو یافت نشد.');
+    }
+
+    reservation.status = newStatus;
+    if (newHoldExpiry !== undefined) {
+      reservation.holdExpiresAt = newHoldExpiry;
+    }
+    reservation.updatedAt = now;
+    this.reservations.set(reservationId, reservation);
+    return reservation;
+  }
+
+  /**
    * دریافت رزرو بر اساس شناسه
    */
   async getReservationById(reservationId: string): Promise<ReservationRequest | undefined> {
     return this.reservations.get(reservationId);
   }
 }
+
