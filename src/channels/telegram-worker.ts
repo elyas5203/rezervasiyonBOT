@@ -59,6 +59,16 @@ export function parseTomanValue(input: string): number {
   return val;
 }
 
+export function escapeHtml(str: string | undefined | null): string {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export interface HostWizardSession {
   step: "CITY" | "TITLE" | "CONTACT" | "ADDRESS" | "SUPPLY_TYPE" | "CAPACITY" | "FINANCIAL" | "FINANCIAL_AMOUNT" | "APPROVAL" | "CONFIRM";
   data: {
@@ -627,7 +637,7 @@ export class TelegramBotWorker {
       const message = {
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب و فضاهای اسکان (گام ۱ از ۷):</b>\n\nخادم گرامی، لطفاً شهر محل استقرار موکب خود را انتخاب فرمایید یا <b>نام شهر را مستقیماً تایپ فرمایید</b>:\n<i>(مثال: سامرا، کاظمین، شیراز، قم و...)</i>`,
+        text: `<b>➕ ثبت موکب [🟩⬜️⬜️⬜️⬜️⬜️⬜️] (گام ۱ از ۷ - انتخاب شهر):</b>\n\nخادم گرامی، لطفاً شهر محل استقرار موکب خود را انتخاب فرمایید یا <b>نام شهر را مستقیماً تایپ فرمایید</b>:\n<i>(مثال: سامرا، کاظمین، شیراز، قم و...)</i>`,
         inlineKeyboard: [
           [
             { text: "کربلای معلی 🇮🇶", callbackData: "HOST_CITY_کربلای معلی" },
@@ -654,6 +664,173 @@ export class TelegramBotWorker {
       }
       if (text.includes("فیش") || text.includes("واریز")) {
         return this.handleHostMessage(chatId, "", "RECEIPTS_INBOX", fromUserId, messageId);
+      }
+    }
+
+    // پردازش بازگشت به گام قبل در ویزارد موکب‌دار
+    if (callback === "HOST_PREV_STEP" || (wiz && (text === "قبلی" || text === "مرحله قبل" || text === "برگشت"))) {
+      if (!wiz) {
+        return this.handleHostMessage(chatId, "", "HOST_MENU", fromUserId, messageId);
+      }
+      if (wiz.step === "TITLE") {
+        wiz.step = "CITY";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩⬜️⬜️⬜️⬜️⬜️⬜️] (گام ۱ از ۷ - انتخاب شهر):</b>\n\nخادم گرامی، لطفاً شهر محل استقرار موکب خود را انتخاب فرمایید یا <b>نام شهر را مستقیماً تایپ فرمایید</b>:\n<i>(شهر قبلی: ${escapeHtml(wiz.data.city || "انتخاب‌نشده")})</i>`,
+          inlineKeyboard: [
+            [
+              { text: "کربلای معلی 🇮🇶", callbackData: "HOST_CITY_کربلای معلی" },
+              { text: "نجف اشرف 🇮🇶", callbackData: "HOST_CITY_نجف اشرف" },
+            ],
+            [
+              { text: "مشهد مقدس 🇮🇷", callbackData: "HOST_CITY_مشهد مقدس" },
+              { text: "قم مقدسه 🇮🇷", callbackData: "HOST_CITY_قم مقدسه" },
+            ],
+            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+      if (wiz.step === "CONTACT") {
+        wiz.step = "TITLE";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩🟩⬜️⬜️⬜️⬜️⬜️] (گام ۲ از ۷ - نام موکب):</b>\n\nشهر انتخاب‌شده: <b>${escapeHtml(wiz.data.city)}</b> ✅\n\nلطفاً <b>نام رسمی موکب، حسینیه یا اقامتگاه</b> خود را به صورت پیام متنی ارسال نمایید:\n<i>(نام قبلی: ${escapeHtml(wiz.data.title || "ثبت‌نشده")})</i>`,
+          inlineKeyboard: [
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+      if (wiz.step === "ADDRESS") {
+        wiz.step = "CONTACT";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩⬜️⬜️⬜️⬜️] (گام ۳ از ۷ - مشخصات مسئول):</b>\n\nنام موکب: <b>${escapeHtml(wiz.data.title)}</b> ✅\n\nلطفاً <b>نام مسئول موکب و شماره همراه</b> هماهنگی را ارسال فرمایید:\n<i>(مشخصات قبلی: ${escapeHtml(wiz.data.contactName || "ثبت‌نشده")})</i>`,
+          inlineKeyboard: [
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+      if (wiz.step === "SUPPLY_TYPE") {
+        wiz.step = "ADDRESS";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩⬜️⬜️⬜️] (گام ۴ از ۷ - نشانی دقیق):</b>\n\nمسئول و تماس: <b>${escapeHtml(wiz.data.contactName)}</b> ✅\n\nلطفاً <b>نشانی دقیق موکب و موقعیت مکانی</b> را ارسال فرمایید:\n<i>(نشانی قبلی: ${escapeHtml(wiz.data.address || "ثبت‌نشده")})</i>`,
+          inlineKeyboard: [
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+      if (wiz.step === "CAPACITY") {
+        wiz.step = "SUPPLY_TYPE";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩⬜️⬜️] (گام ۵ از ۷ - نوع فضاهای اسکان):</b>\n\nنشانی: <b>${escapeHtml(wiz.data.address)}</b> ✅\n\nلطفاً نوع فضاهای اقامتی موکب را تعیین فرمایید:`,
+          inlineKeyboard: [
+            [{ text: "سالن‌های عمومی (تفکیک آقایان و بانوان)", callbackData: "HOST_SUPPLY_PUBLIC" }],
+            [{ text: "اتاق‌های خانوادگی مستقل (دربست)", callbackData: "HOST_SUPPLY_PRIVATE" }],
+            [{ text: "ترکیب هر دو (هم سالن و هم اتاق)", callbackData: "HOST_SUPPLY_BOTH" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+      if (wiz.step === "FINANCIAL" || wiz.step === "FINANCIAL_AMOUNT") {
+        wiz.step = "CAPACITY";
+        const supply = wiz.data.supplyType || "PUBLIC";
+        if (supply === "PUBLIC") {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ تعیین ظرفیت سالن‌های عمومی:</b>\n\nظرفیت کل پذیرش در هر شب را انتخاب نمایید یا <b>عدد ظرفیت دلخواه را بنویسید</b> (مثال: ۱۵۰ نفر):\n<i>(نصف ظرفیت به برادران و نصف به خواهران تخصیص می‌یابد)</i>`,
+            inlineKeyboard: [
+              [
+                { text: "۵۰ نفر (۲۵ آقا / ۲۵ خانم)", callbackData: "HOST_CAP_50" },
+                { text: "۱۰۰ نفر (۵۰ آقا / ۵۰ خانم)", callbackData: "HOST_CAP_100" },
+              ],
+              [
+                { text: "۲۰۰ نفر (۱۰۰ آقا / ۱۰۰ خانم)", callbackData: "HOST_CAP_200" },
+                { text: "۵۰۰ نفر (۲۵۰ آقا / ۲۵۰ خانم)", callbackData: "HOST_CAP_500" },
+              ],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        } else if (supply === "PRIVATE") {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ تعیین تعداد و ظرفیت اتاق‌های دربست:</b>\n\nتعداد اتاق‌ها و ظرفیت هر اتاق خانوادگی را انتخاب فرمایید یا <b>ترکیب دلخواه خود را بنویسید</b>:\n<i>(مثال: ۵ اتاق ۴ نفره یا ۳*۵ یا ۴ در ۶)</i>`,
+            inlineKeyboard: [
+              [
+                { text: "۵ اتاق ۴ نفره (۲۰ نفر)", callbackData: "HOST_ROOMS_5_4" },
+                { text: "۱۰ اتاق ۴ نفره (۴۰ نفر)", callbackData: "HOST_ROOMS_10_4" },
+              ],
+              [
+                { text: "۵ اتاق ۶ نفره (۳۰ نفر)", callbackData: "HOST_ROOMS_5_6" },
+                { text: "۱۰ اتاق ۶ نفره (۶۰ نفر)", callbackData: "HOST_ROOMS_10_6" },
+              ],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        } else {
+          await this.editOrSendMessage({
+            chatId,
+            messageId,
+            text: `<b>➕ تعیین ظرفیت سالن‌ها و اتاق‌ها:</b>\n\nترکیب ظرفیت مورد نظر خود را انتخاب نمایید یا <b>بنویسید</b> (مثال: ۱۰۰ سالن + ۵ اتاق ۴ نفره):`,
+            inlineKeyboard: [
+              [{ text: "۱۰۰ نفر سالن + ۵ اتاق ۴ نفره", callbackData: "HOST_BOTH_100_5_4" }],
+              [{ text: "۲۰۰ نفر سالن + ۱۰ اتاق ۴ نفره", callbackData: "HOST_BOTH_200_10_4" }],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+            ],
+          });
+          return;
+        }
+      }
+      if (wiz.step === "APPROVAL") {
+        wiz.step = "FINANCIAL";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩⬜️] (گام ۶ از ۷ - مدل مالی و خدمات):</b>\n\nمدل ارائه خدمات اسکان را تعیین فرمایید یا <b>مبلغ دلخواه را مستقیماً بنویسید</b>:`,
+          inlineKeyboard: [
+            [{ text: "رایگان و صلواتی 💚", callbackData: "HOST_FIN_FREE" }],
+            [
+              { text: "تعیین هزینه اقامت دلخواه 💰", callbackData: "HOST_FIN_CHOOSE_FEE" },
+              { text: "تعیین ودیعه امانت دلخواه 🛡", callbackData: "HOST_FIN_CHOOSE_DEP" },
+            ],
+            [
+              { text: "شبی ۵۰ هزار تومان 💰", callbackData: "HOST_FIN_FEE_50000" },
+              { text: "شبی ۱۰۰ هزار تومان 💰", callbackData: "HOST_FIN_FEE_100000" },
+            ],
+            [{ text: "تضمین امانت ۲۰۰ هزار تومان 🛡", callbackData: "HOST_FIN_DEP_200000" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
+      }
+      if (wiz.step === "CONFIRM") {
+        wiz.step = "APPROVAL";
+        await this.editOrSendMessage({
+          chatId,
+          messageId,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩🟩] (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
+          inlineKeyboard: [
+            [{ text: "⚡️ تأیید فوری و خودکار (رزرو قطعی آنی)", callbackData: "HOST_APP_INSTANT" }],
+            [{ text: "⏳ تأیید دستی (با بررسی و پذیرش من)", callbackData: "HOST_APP_MANUAL" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+          ],
+        });
+        return;
       }
     }
 
@@ -688,8 +865,10 @@ export class TelegramBotWorker {
       await this.editOrSendMessage({
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب (گام ۲ از ۷ - نام موکب):</b>\n\nشهر انتخاب‌شده: <b>${city}</b> ✅\n\nلطفاً <b>نام رسمی موکب، حسینیه یا اقامتگاه</b> خود را به صورت پیام متنی ارسال نمایید:\n<i>(مثال: موکب احباب الرضا علیه‌السلام)</i>`,
-        inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+        text: `<b>➕ ثبت موکب [🟩🟩⬜️⬜️⬜️⬜️⬜️] (گام ۲ از ۷ - نام موکب):</b>\n\nشهر انتخاب‌شده: <b>${escapeHtml(city)}</b> ✅\n\nلطفاً <b>نام رسمی موکب، حسینیه یا اقامتگاه</b> خود را به صورت پیام متنی ارسال نمایید:\n<i>(مثال: موکب احباب الرضا علیه‌السلام)</i>`,
+        inlineKeyboard: [
+          [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }]
+        ],
       });
       return;
     }
@@ -703,8 +882,10 @@ export class TelegramBotWorker {
       await this.editOrSendMessage({
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب (گام ۳ از ۷ - مشخصات مسئول):</b>\n\nنام موکب: <b>${wiz.data.title}</b> ✅\n\nلطفاً <b>نام مسئول موکب و شماره همراه</b> هماهنگی را ارسال فرمایید:\n<i>(مثال: حاج علی محمدی 09121111111)</i>`,
-        inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+        text: `<b>➕ ثبت موکب [🟩🟩🟩⬜️⬜️⬜️⬜️] (گام ۳ از ۷ - مشخصات مسئول):</b>\n\nنام موکب: <b>${escapeHtml(wiz.data.title)}</b> ✅\n\nلطفاً <b>نام مسئول موکب و شماره همراه</b> هماهنگی را ارسال فرمایید:\n<i>(مثال: حاج علی محمدی 09121111111)</i>`,
+        inlineKeyboard: [
+          [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }]
+        ],
       });
       return;
     }
@@ -719,8 +900,10 @@ export class TelegramBotWorker {
       await this.editOrSendMessage({
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب (گام ۴ از ۷ - نشانی دقیق):</b>\n\nمسئول و تماس: <b>${wiz.data.contactName}</b> ✅\n\nلطفاً <b>نشانی دقیق موکب و موقعیت مکانی</b> را ارسال فرمایید:\n<i>(مثال: شارع قبله الامام الحسین، عمود ۱۴۰)</i>`,
-        inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+        text: `<b>➕ ثبت موکب [🟩🟩🟩🟩⬜️⬜️⬜️] (گام ۴ از ۷ - نشانی دقیق):</b>\n\nمسئول و تماس: <b>${escapeHtml(wiz.data.contactName)}</b> ✅\n\nلطفاً <b>نشانی دقیق موکب و موقعیت مکانی</b> را ارسال فرمایید:\n<i>(مثال: شارع قبله الامام الحسین، عمود ۱۴۰)</i>`,
+        inlineKeyboard: [
+          [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }]
+        ],
       });
       return;
     }
@@ -734,12 +917,12 @@ export class TelegramBotWorker {
       await this.editOrSendMessage({
         chatId,
         messageId,
-        text: `<b>➕ ثبت موکب (گام ۵ از ۷ - نوع فضاهای اسکان):</b>\n\nنشانی: <b>${wiz.data.address}</b> ✅\n\nلطفاً نوع فضاهای اقامتی موکب را تعیین فرمایید:`,
+        text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩⬜️⬜️] (گام ۵ از ۷ - نوع فضاهای اسکان):</b>\n\nنشانی: <b>${escapeHtml(wiz.data.address)}</b> ✅\n\nلطفاً نوع فضاهای اقامتی موکب را تعیین فرمایید:`,
         inlineKeyboard: [
           [{ text: "سالن‌های عمومی (تفکیک آقایان و بانوان)", callbackData: "HOST_SUPPLY_PUBLIC" }],
           [{ text: "اتاق‌های خانوادگی مستقل (دربست)", callbackData: "HOST_SUPPLY_PRIVATE" }],
           [{ text: "ترکیب هر دو (هم سالن و هم اتاق)", callbackData: "HOST_SUPPLY_BOTH" }],
-          [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+          [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
         ],
       });
       return;
@@ -770,7 +953,7 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ تعیین ظرفیت سالن‌های عمومی:</b>\n\nظرفیت کل پذیرش در هر شب را انتخاب نمایید یا <b>عدد ظرفیت دلخواه را بنویسید</b> (مثال: ۱۵۰ نفر):\n<i>(نصف ظرفیت به برادران و نصف به خواهران تخصیص می‌یابد)</i>`,
+            text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩⬜️⬜️] (گام ۵ از ۷ - تعیین ظرفیت سالن‌های عمومی):</b>\n\nظرفیت کل پذیرش در هر شب را انتخاب نمایید یا <b>عدد ظرفیت دلخواه را بنویسید</b> (مثال: ۱۵۰ نفر):\n<i>(نصف ظرفیت به برادران و نصف به خواهران تخصیص می‌یابد)</i>`,
             inlineKeyboard: [
               [
                 { text: "۵۰ نفر (۲۵ آقا / ۲۵ خانم)", callbackData: "HOST_CAP_50" },
@@ -780,7 +963,7 @@ export class TelegramBotWorker {
                 { text: "۲۰۰ نفر (۱۰۰ آقا / ۱۰۰ خانم)", callbackData: "HOST_CAP_200" },
                 { text: "۵۰۰ نفر (۲۵۰ آقا / ۲۵۰ خانم)", callbackData: "HOST_CAP_500" },
               ],
-              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
             ],
           });
           return;
@@ -788,7 +971,7 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ تعیین تعداد و ظرفیت اتاق‌های دربست:</b>\n\nتعداد اتاق‌ها و ظرفیت هر اتاق خانوادگی را انتخاب فرمایید یا <b>ترکیب دلخواه خود را بنویسید</b>:\n<i>(مثال: ۵ اتاق ۴ نفره یا ۳*۵ یا ۴ در ۶)</i>`,
+            text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩⬜️⬜️] (گام ۵ از ۷ - تعیین تعداد و ظرفیت اتاق‌های دربست):</b>\n\nتعداد اتاق‌ها و ظرفیت هر اتاق خانوادگی را انتخاب فرمایید یا <b>ترکیب دلخواه خود را بنویسید</b>:\n<i>(مثال: ۵ اتاق ۴ نفره یا ۳*۵ یا ۴ در ۶)</i>`,
             inlineKeyboard: [
               [
                 { text: "۵ اتاق ۴ نفره (۲۰ نفر)", callbackData: "HOST_ROOMS_5_4" },
@@ -798,7 +981,7 @@ export class TelegramBotWorker {
                 { text: "۵ اتاق ۶ نفره (۳۰ نفر)", callbackData: "HOST_ROOMS_5_6" },
                 { text: "۱۰ اتاق ۶ نفره (۶۰ نفر)", callbackData: "HOST_ROOMS_10_6" },
               ],
-              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
             ],
           });
           return;
@@ -806,11 +989,11 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ تعیین ظرفیت سالن‌ها و اتاق‌ها:</b>\n\nترکیب ظرفیت مورد نظر خود را انتخاب نمایید یا <b>بنویسید</b> (مثال: ۱۰۰ سالن + ۵ اتاق ۴ نفره):`,
+            text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩⬜️⬜️] (گام ۵ از ۷ - تعیین ظرفیت سالن‌ها و اتاق‌ها):</b>\n\nترکیب ظرفیت مورد نظر خود را انتخاب نمایید یا <b>بنویسید</b> (مثال: ۱۰۰ سالن + ۵ اتاق ۴ نفره):`,
             inlineKeyboard: [
               [{ text: "۱۰۰ نفر سالن + ۵ اتاق ۴ نفره", callbackData: "HOST_BOTH_100_5_4" }],
               [{ text: "۲۰۰ نفر سالن + ۱۰ اتاق ۴ نفره", callbackData: "HOST_BOTH_200_10_4" }],
-              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
             ],
           });
           return;
@@ -893,7 +1076,7 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `<b>➕ ثبت موکب (گام ۶ از ۷ - مدل مالی و خدمات):</b>\n\nمدل ارائه خدمات اسکان را تعیین فرمایید یا <b>مبلغ دلخواه را مستقیماً بنویسید</b>:`,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩⬜️] (گام ۶ از ۷ - مدل مالی و خدمات):</b>\n\nمدل ارائه خدمات اسکان را تعیین فرمایید یا <b>مبلغ دلخواه را مستقیماً بنویسید</b>:`,
           inlineKeyboard: [
             [{ text: "رایگان و صلواتی 💚", callbackData: "HOST_FIN_FREE" }],
             [
@@ -905,7 +1088,7 @@ export class TelegramBotWorker {
               { text: "شبی ۱۰۰ هزار تومان 💰", callbackData: "HOST_FIN_FEE_100000" },
             ],
             [{ text: "تضمین امانت ۲۰۰ هزار تومان 🛡", callbackData: "HOST_FIN_DEP_200000" }],
-            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
           ],
         });
         return;
@@ -923,7 +1106,7 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `<b>💰 تعیین مبلغ هزینه اقامت:</b>\n\nلطفاً <b>مبلغ هزینه هر شب به ازای هر زائر</b> را به تومان تایپ نمایید یا یکی از مبالغ زیر را انتخاب کنید:\n<i>(مثال: 70000 یا ۷۰ هزار تومان)</i>`,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩⬜️] (گام ۶ از ۷ - تعیین مبلغ هزینه اقامت):</b>\n\nلطفاً <b>مبلغ هزینه هر شب به ازای هر زائر</b> را به تومان تایپ نمایید یا یکی از مبالغ زیر را انتخاب کنید:\n<i>(مثال: 70000 یا ۷۰ هزار تومان)</i>`,
           inlineKeyboard: [
             [
               { text: "۳۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_30000" },
@@ -933,7 +1116,7 @@ export class TelegramBotWorker {
               { text: "۷۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_70000" },
               { text: "۱۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_100000" },
             ],
-            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
           ],
         });
         return;
@@ -950,7 +1133,7 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `<b>🛡 تعیین مبلغ تضمین حسن انجام کار (امانت):</b>\n\nلطفاً <b>مبلغ تضمین امانت</b> را به تومان تایپ نمایید یا یکی از گزینه‌های زیر را انتخاب فرمایید:\n<i>(مثال: 150000 یا ۱۵۰ هزار تومان)</i>`,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩⬜️] (گام ۶ از ۷ - تعیین مبلغ تضمین امانت):</b>\n\nلطفاً <b>مبلغ تضمین امانت</b> را به تومان تایپ نمایید یا یکی از گزینه‌های زیر را انتخاب فرمایید:\n<i>(مثال: 150000 یا ۱۵۰ هزار تومان)</i>`,
           inlineKeyboard: [
             [
               { text: "۱۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_100000" },
@@ -960,7 +1143,7 @@ export class TelegramBotWorker {
               { text: "۳۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_300000" },
               { text: "۵۰۰,۰۰۰ تومان", callbackData: "HOST_AMOUNT_500000" },
             ],
-            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
           ],
         });
         return;
@@ -1006,7 +1189,9 @@ export class TelegramBotWorker {
                 chatId,
                 messageId,
                 text: `لطفاً مبلغ ودیعه را به تومان وارد نمایید (مثال: ۱۵۰ هزار تومان یا 150000):`,
-                inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+                inlineKeyboard: [
+                  [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+                ],
               });
               return;
             }
@@ -1021,7 +1206,9 @@ export class TelegramBotWorker {
                 chatId,
                 messageId,
                 text: `⚠️ مبلغ واردشده نامعتبر است. لطفاً مبلغ هزینه را به تومان وارد نمایید (مثال: ۷۰ هزار تومان یا 70000):`,
-                inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+                inlineKeyboard: [
+                  [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+                ],
               });
               return;
             }
@@ -1034,11 +1221,11 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `<b>➕ ثبت موکب (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
+          text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩🟩] (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
           inlineKeyboard: [
             [{ text: "⚡️ تأیید فوری و خودکار (رزرو قطعی آنی)", callbackData: "HOST_APP_INSTANT" }],
             [{ text: "⏳ تأیید دستی (با بررسی و پذیرش من)", callbackData: "HOST_APP_MANUAL" }],
-            [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
           ],
         });
         return;
@@ -1069,11 +1256,11 @@ export class TelegramBotWorker {
           await this.editOrSendMessage({
             chatId,
             messageId,
-            text: `<b>➕ ثبت موکب (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
+            text: `<b>➕ ثبت موکب [🟩🟩🟩🟩🟩🟩🟩] (گام ۷ از ۷ - شیوه تأیید رزرو مسافر):</b>\n\nنحوه تأیید درخواست‌های رزرو زائران را تعیین نمایید:`,
             inlineKeyboard: [
               [{ text: "⚡️ تأیید فوری و خودکار (رزرو قطعی آنی)", callbackData: "HOST_APP_INSTANT" }],
               [{ text: "⏳ تأیید دستی (با بررسی و پذیرش من)", callbackData: "HOST_APP_MANUAL" }],
-              [{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }],
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
             ],
           });
           return;
@@ -1082,7 +1269,9 @@ export class TelegramBotWorker {
             chatId,
             messageId,
             text: `⚠️ مبلغ واردشده نامعتبر است. لطفاً مبلغ مورد نظر را به تومان وارد فرمایید (مثال: 70000):`,
-            inlineKeyboard: [[{ text: "🔙 انصراف و بازگشت", callbackData: "HOST_MENU" }]],
+            inlineKeyboard: [
+              [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف", callbackData: "HOST_MENU" }],
+            ],
           });
           return;
         }
@@ -1120,10 +1309,10 @@ export class TelegramBotWorker {
         await this.editOrSendMessage({
           chatId,
           messageId,
-          text: `📋 <b>پیش‌نمایش پرونده موکب جهت ثبت:</b>\n\n• <b>نام موکب:</b> ${d.title}\n• <b>شهر زیارتی:</b> ${d.city}\n• <b>مسئول و تماس:</b> ${d.contactName}\n• <b>نشانی:</b> ${d.address}\n• <b>نوع فضا:</b> ${supplyLabel}\n• <b>ظرفیت فضاها:</b> ${combinedCap}\n• <b>مدل مالی:</b> ${finLabel}\n• <b>شیوه تأیید رزرو:</b> ${appLabel}\n\nجهت ثبت قطعی و ارسال به کارتابل ادمین روی دکمه زیر کلیک نمایید یا عبارت «تأیید» را ارسال فرمایید:`,
+          text: `📋 <b>پیش‌نمایش پرونده موکب جهت ثبت:</b>\n\n• <b>نام موکب:</b> ${escapeHtml(d.title)}\n• <b>شهر زیارتی:</b> ${escapeHtml(d.city)}\n• <b>مسئول و تماس:</b> ${escapeHtml(d.contactName)}\n• <b>نشانی:</b> ${escapeHtml(d.address)}\n• <b>نوع فضا:</b> ${escapeHtml(supplyLabel)}\n• <b>ظرفیت فضاها:</b> ${escapeHtml(combinedCap)}\n• <b>مدل مالی:</b> ${escapeHtml(finLabel)}\n• <b>شیوه تأیید رزرو:</b> ${escapeHtml(appLabel)}\n\nجهت ثبت قطعی و ارسال به کارتابل ادمین روی دکمه زیر کلیک نمایید یا عبارت «تأیید» را ارسال فرمایید:`,
           inlineKeyboard: [
             [{ text: "✅ تأیید نهایی و ثبت موکب", callbackData: "HOST_SUBMIT_PLACE" }],
-            [{ text: "❌ انصراف و لغو", callbackData: "HOST_MENU" }],
+            [{ text: "🔙 مرحله قبل", callbackData: "HOST_PREV_STEP" }, { text: "❌ انصراف و لغو", callbackData: "HOST_MENU" }],
           ],
         });
         return;

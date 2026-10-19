@@ -64,6 +64,7 @@
 | پاکسازی پیام‌ها و ویرایش درجا (UX ختم‌ساز) | docs/ai/masters/MASTER_29_IN_PLACE_UX_AND_MESSAGE_CLEANUP.md#L1-L85 — «حذف پیام کاربر، editMessageText درجا، جلوگیری از تلنبار پیام» |
 | ویزارد تعاملی موکب و رزرو زائر در تلگرام | docs/ai/masters/MASTER_30_INTERACTIVE_TELEGRAM_BOT_FLOWS.md#L1-L60 — «ویزارد ۷ مرحله‌ای، کارتابل فضاها، رزرو واقعی زائر و اعلان ادمین» |
 | انعطاف‌پذیری دوگانه (دکمه + متن دلخواه) | docs/ai/masters/MASTER_31_DUAL_INPUT_FLEXIBILITY.md#L1-L50 — «ورود دلخواه ظرفیت، اتاق‌ها، هزینه به تومان و شهر با مهار عربستان» |
+| بازبینی جامع ۵۰‌نقشی و اصلاح UI/UX | SUBAGENT_REVIEW_MASTER.md#L1-L250 — «تحلیل جامع ۵۰ نقش، فرار تگ‌های HTML، دکمه مرحله قبل و نوار پیشرفت» |
 | کارت‌ها و روش فراخوانی | docs/ai/agents/AGENT_PLAYBOOK.md#L1-L31 — «راهنمای عامل‌های نقش‌دار» |
 | ممیزی آمادگی | docs/ai/IMPLEMENTATION_READINESS_AUDIT.md#L1-L31 — «یافته‌ها و تعریف آماده‌بودن» |
 
